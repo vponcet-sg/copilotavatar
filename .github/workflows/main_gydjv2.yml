@@ -40,6 +40,7 @@ jobs:
           # Copy server and config files
           cp server.js deploy-package/
           cp web.config deploy-package/
+          cp .deployment deploy-package/
           
           # Create a production-only package.json (without build scripts)
           cat > deploy-package/package.json << 'EOF'
@@ -80,6 +81,16 @@ jobs:
           cd deploy-package
           npm install --only=production --omit=dev
           cd ..
+          
+          # Verify deployment package structure
+          echo "📦 Deployment package contents:"
+          ls -la deploy-package/
+          echo "📁 Checking dist directory:"
+          ls -la deploy-package/dist/ 2>/dev/null || echo "❌ dist directory not found"
+          echo "📄 Checking package.json:"
+          cat deploy-package/package.json
+          echo "🔧 Checking .deployment file:"
+          cat deploy-package/.deployment 2>/dev/null || echo "❌ .deployment file not found"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -111,6 +122,30 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D110D59C5BA047DA82254FF4B8A570CE }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_1698A8A41FF842D39CFB2C55BAE07A4D }}
 
+      - name: 'Configure Azure Web App Settings Before Deployment'
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Configure app settings BEFORE deployment to prevent Oryx build
+            az webapp config appsettings set \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --settings \
+                SCM_DO_BUILD_DURING_DEPLOYMENT=false \
+                ENABLE_ORYX_BUILD=false \
+                WEBSITE_NODE_DEFAULT_VERSION=~22 \
+                NODE_ENV=production \
+                WEBSITES_ENABLE_APP_SERVICE_STORAGE=false \
+                WEBSITES_PORT=8080 \
+                WEBSITE_RUN_FROM_PACKAGE=1 \
+                WEBSITE_DISABLE_SCM_SEPARATION=true
+            
+            # Set startup command
+            az webapp config set \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --startup-file "npm start"
+
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         run: |
@@ -127,29 +162,10 @@ jobs:
             --type zip \
             --async false
           
-      - name: 'Configure Azure Web App Settings'
+      - name: 'Enable Application Logging'
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            # Disable Oryx build since we already built locally
-            az webapp config appsettings set \
-              --resource-group appsvc_linux_eastasia \
-              --name GYDJv2 \
-              --settings \
-                SCM_DO_BUILD_DURING_DEPLOYMENT=false \
-                ENABLE_ORYX_BUILD=false \
-                WEBSITE_NODE_DEFAULT_VERSION=~22 \
-                NODE_ENV=production \
-                WEBSITES_ENABLE_APP_SERVICE_STORAGE=false \
-                WEBSITES_PORT=8080 \
-                WEBSITE_RUN_FROM_PACKAGE=1
-            
-            # Set startup command
-            az webapp config set \
-              --resource-group appsvc_linux_eastasia \
-              --name GYDJv2 \
-              --startup-file "npm start"
-            
             # Enable logging for debugging
             az webapp log config \
               --resource-group appsvc_linux_eastasia \
