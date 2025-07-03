@@ -34,7 +34,7 @@ jobs:
           # Create deployment package with all necessary files
           mkdir deploy-package
           
-          # Copy built assets
+          # Copy built assets (already compiled)
           cp -r dist deploy-package/
           
           # Copy server and config files
@@ -51,7 +51,7 @@ jobs:
           # Copy environment files if they exist
           cp .env deploy-package/ 2>/dev/null || true
           
-          # Install production dependencies
+          # Install production dependencies only
           cd deploy-package
           npm ci --only=production --omit=dev
           cd ..
@@ -101,6 +101,9 @@ jobs:
           app-name: 'GYDJv2'
           slot-name: 'Production'
           package: .
+          # Skip Oryx build since we already built locally
+          scm-do-build-during-deployment: false
+          enable-oryx-build: false
           
       - name: 'Configure Azure Web App Settings'
         uses: azure/CLI@v1
