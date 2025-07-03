@@ -299,7 +299,7 @@ const App: React.FC = () => {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🎤 Copilot Agent Avatar/h1>
+        <h1>🎤 Copilot Agent Avatar</h1>
         <StatusIndicator isConnected={appState.isConnected} />
       </header>
 
