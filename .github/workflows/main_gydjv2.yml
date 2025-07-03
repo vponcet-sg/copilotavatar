@@ -131,25 +131,55 @@ jobs:
           app-name: 'GYDJv2'
           slot-name: 'Production'
           package: 'deploy-package'
-          startup-file: 'npm start'
+          startup-command: 'npm start'
           
       - name: 'Configure Azure Web App Settings'
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            # Configure app settings for production
+            # Configure app settings for production (using separate commands for reliability)
             az webapp config appsettings set \
               --resource-group appsvc_linux_eastasia \
               --name GYDJv2 \
-              --settings \
-                SCM_DO_BUILD_DURING_DEPLOYMENT=false \
-                ENABLE_ORYX_BUILD=false \
-                WEBSITE_NODE_DEFAULT_VERSION=~22 \
-                NODE_ENV=production \
-                WEBSITES_ENABLE_APP_SERVICE_STORAGE=false \
-                WEBSITES_PORT=8080 \
-                WEBSITE_RUN_FROM_PACKAGE=1 \
-                WEBSITE_DISABLE_SCM_SEPARATION=true
+              --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
+            
+            az webapp config appsettings set \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --settings ENABLE_ORYX_BUILD=false
+            
+            az webapp config appsettings set \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --settings WEBSITE_NODE_DEFAULT_VERSION=~22
+            
+            az webapp config appsettings set \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --settings NODE_ENV=production
+            
+            az webapp config appsettings set \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --settings WEBSITES_ENABLE_APP_SERVICE_STORAGE=false
+            
+            az webapp config appsettings set \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --settings WEBSITES_PORT=8080
+            
+            az webapp config appsettings set \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --settings WEBSITE_RUN_FROM_PACKAGE=1
+            
+            # Verify settings were applied
+            echo "📊 Checking applied settings:"
+            az webapp config appsettings list \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --query "[?name=='NODE_ENV' || name=='WEBSITES_PORT' || name=='SCM_DO_BUILD_DURING_DEPLOYMENT']" \
+              --output table
             
             # Enable application logging
             az webapp log config \
@@ -159,6 +189,7 @@ jobs:
               --level information
             
             # Restart the web app to apply new settings
+            echo "🔄 Restarting web app to apply settings..."
             az webapp restart \
               --resource-group appsvc_linux_eastasia \
               --name GYDJv2
