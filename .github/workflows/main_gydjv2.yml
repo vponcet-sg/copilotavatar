@@ -43,6 +43,12 @@ jobs:
           cp package-lock.json deploy-package/
           cp web.config deploy-package/
           
+          # Copy TypeScript config files (needed for Oryx)
+          cp tsconfig.json deploy-package/
+          cp tsconfig.app.json deploy-package/ 2>/dev/null || true
+          cp tsconfig.node.json deploy-package/ 2>/dev/null || true
+          cp vite.config.ts deploy-package/ 2>/dev/null || true
+          
           # Copy public folder if it exists
           if [ -d "public" ]; then
             cp -r public deploy-package/
@@ -101,19 +107,22 @@ jobs:
           app-name: 'GYDJv2'
           slot-name: 'Production'
           package: .
-          # Skip Oryx build since we already built locally
-          scm-do-build-during-deployment: false
-          enable-oryx-build: false
           
       - name: 'Configure Azure Web App Settings'
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            # Set Node.js version to match build
+            # Disable Oryx build since we already built locally
             az webapp config appsettings set \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --name GYDJv2 \
-              --settings WEBSITE_NODE_DEFAULT_VERSION=~22
+              --settings \
+                SCM_DO_BUILD_DURING_DEPLOYMENT=false \
+                ENABLE_ORYX_BUILD=false \
+                WEBSITE_NODE_DEFAULT_VERSION=~22 \
+                NODE_ENV=production \
+                WEBSITES_ENABLE_APP_SERVICE_STORAGE=false \
+                WEBSITES_PORT=8080
             
             # Set startup command
             az webapp config set \
@@ -127,12 +136,3 @@ jobs:
               --name GYDJv2 \
               --application-logging filesystem \
               --level information
-            
-            # Set additional environment variables
-            az webapp config appsettings set \
-              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --name GYDJv2 \
-              --settings \
-                NODE_ENV=production \
-                WEBSITES_ENABLE_APP_SERVICE_STORAGE=false \
-                WEBSITES_PORT=8080
