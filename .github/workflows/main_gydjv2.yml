@@ -181,6 +181,19 @@ jobs:
               --query "[?name=='NODE_ENV' || name=='WEBSITES_PORT' || name=='SCM_DO_BUILD_DURING_DEPLOYMENT']" \
               --output table
             
+            # Configure HTTPS settings for microphone access
+            echo "🔒 Configuring HTTPS and security settings..."
+            az webapp update \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --https-only true
+            
+            az webapp config set \
+              --resource-group appsvc_linux_eastasia \
+              --name GYDJv2 \
+              --http20-enabled true \
+              --min-tls-version "1.2"
+            
             # Enable application logging
             az webapp log config \
               --resource-group appsvc_linux_eastasia \
@@ -195,8 +208,14 @@ jobs:
               --name GYDJv2
             
             echo "✅ Deployment completed successfully!"
-            echo "🌐 Web App URL: https://gydjv2.azurewebsites.net/"
-            echo "🔍 Health Check: https://gydjv2.azurewebsites.net/health"
+            
+            # Get the actual app URL from Azure
+            APP_URL=$(az webapp show --resource-group appsvc_linux_eastasia --name GYDJv2 --query "defaultHostName" -o tsv)
+            echo "🌐 Web App URL: https://$APP_URL/"
+            echo "🔍 Health Check: https://$APP_URL/health"
+            
+            # Export URL for next step
+            echo "APP_URL=$APP_URL" >> $GITHUB_ENV
             
       - name: 'Verify Deployment'
         run: |
@@ -204,12 +223,17 @@ jobs:
           echo "⏳ Waiting for app to start..."
           sleep 30
           
+          # Use the actual app URL from previous step
+          APP_URL="${{ env.APP_URL }}"
+          echo "🔗 Testing URL: https://$APP_URL/health"
+          
           # Check if the app is responding
           for i in {1..10}; do
             echo "🔍 Health check attempt $i/10..."
-            if curl -f -s https://gydjv2.azurewebsites.net/health > /dev/null; then
+            if curl -f -s "https://$APP_URL/health" > /dev/null; then
               echo "✅ App is healthy and responding!"
-              curl -s https://gydjv2.azurewebsites.net/health
+              echo "📋 Health check response:"
+              curl -s "https://$APP_URL/health"
               break
             else
               echo "❌ Health check failed, retrying in 30 seconds..."
@@ -219,4 +243,8 @@ jobs:
           
           # Final status check
           echo "📊 Final app status:"
-          curl -s https://gydjv2.azurewebsites.net/health || echo "❌ App is not responding"
+          curl -s "https://$APP_URL/health" || echo "❌ App is not responding"
+          
+          # Test the main page too
+          echo "🏠 Testing main page:"
+          curl -I -s "https://$APP_URL/" || echo "❌ Main page not responding"

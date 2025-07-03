@@ -39,6 +39,38 @@ if (!fs.existsSync(distPath)) {
   console.log('Found dist directory at:', distPath);
 }
 
+// Security and HTTPS middleware
+app.use((req, res, next) => {
+  // Force HTTPS in production
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  
+  // Security headers for microphone access
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Permissions Policy for microphone access
+  res.setHeader('Permissions-Policy', 'microphone=(self), camera=(), geolocation=()');
+  
+  // Content Security Policy - allow microphone access
+  res.setHeader('Content-Security-Policy', 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob:; " +
+    "media-src 'self' blob:; " +
+    "connect-src 'self' wss: https:; " +
+    "font-src 'self'; " +
+    "frame-src 'none';"
+  );
+  
+  next();
+});
+
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, 'dist')));
 

@@ -213,10 +213,31 @@ const App: React.FC = () => {
     }
 
     try {
-      // Check microphone permission
+      // Enhanced microphone permission check with better error messages
+      console.log('🎤 Checking microphone permission...');
+      console.log('🔍 Current protocol:', window.location.protocol);
+      console.log('🔍 Current host:', window.location.host);
+      
+      // Check if we're on HTTPS (required for microphone access on remote domains)
+      if (window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost')) {
+        const httpsUrl = window.location.href.replace('http:', 'https:');
+        setAppState(prev => ({ 
+          ...prev, 
+          error: `Microphone access requires HTTPS. Please visit: ${httpsUrl}` 
+        }));
+        addNotification('🔒 Redirecting to HTTPS for microphone access...', 'info');
+        // Redirect to HTTPS
+        window.location.href = httpsUrl;
+        return;
+      }
+
       const hasPermission = await speechServiceRef.current.checkMicrophonePermission();
       if (!hasPermission) {
-        setAppState(prev => ({ ...prev, error: 'Microphone permission required' }));
+        setAppState(prev => ({ 
+          ...prev, 
+          error: 'Microphone permission required. Please allow microphone access when prompted.' 
+        }));
+        addNotification('🎤 Please allow microphone access in your browser', 'warning');
         return;
       }
 
@@ -408,6 +429,36 @@ const App: React.FC = () => {
     }
 
     try {
+      console.log('🔍 Starting comprehensive microphone diagnostics...');
+      
+      // Check browser environment
+      console.log('🌐 Browser Environment:');
+      console.log('- Protocol:', window.location.protocol);
+      console.log('- Host:', window.location.host);
+      console.log('- User Agent:', navigator.userAgent);
+      console.log('- HTTPS Required:', window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost'));
+      
+      // Check microphone API availability
+      console.log('🎤 Microphone API Availability:');
+      console.log('- navigator.mediaDevices:', !!navigator.mediaDevices);
+      console.log('- getUserMedia:', !!navigator.mediaDevices?.getUserMedia);
+      
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        addNotification('❌ Microphone API not available in this browser', 'warning');
+        return;
+      }
+      
+      // Check current permissions
+      if (navigator.permissions) {
+        try {
+          const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          console.log('🔐 Current microphone permission:', micPermission.state);
+          addNotification(`Microphone permission: ${micPermission.state}`, 'info');
+        } catch (error) {
+          console.log('🔐 Could not query microphone permission:', error);
+        }
+      }
+
       const debugResult = await speechServiceRef.current.debugMicrophoneSetup();
       
       console.log('🔍 Microphone Debug Results:', debugResult);
@@ -416,6 +467,11 @@ const App: React.FC = () => {
         addNotification('Microphone setup: SUCCESS ✅', 'success');
       } else {
         addNotification('Microphone setup: FAILED ❌', 'warning');
+        
+        // Provide specific guidance based on protocol
+        if (window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost')) {
+          addNotification('💡 Try using HTTPS for microphone access', 'info');
+        }
       }
       
       // Show detailed results in console
