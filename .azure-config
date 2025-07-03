@@ -1,0 +1,8 @@
+# Azure App Service build and deployment
+# This file helps Azure understand how to build and deploy your Node.js app
+
+# Build command that Azure will run
+build: npm run build
+
+# Start command that Azure will use to run your app  
+start: npm start
