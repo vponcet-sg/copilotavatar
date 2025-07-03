@@ -1,5 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
 
 name: Build and deploy Node.js app to Azure Web App - GYDJv2
 
@@ -21,7 +19,8 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '22.x'  # Changed to 18.x for better compatibility
+          node-version: '22.x'  # Match your local development version
+          cache: 'npm'
 
       - name: npm install, build, and test
         run: |
@@ -31,17 +30,29 @@ jobs:
 
       - name: Prepare deployment package
         run: |
-          # Copy necessary files for deployment
+          # Create deployment package with all necessary files
           mkdir deploy-package
+          
+          # Copy built assets
           cp -r dist deploy-package/
+          
+          # Copy server and config files
           cp server.js deploy-package/
           cp package.json deploy-package/
           cp package-lock.json deploy-package/
-          cp -r .env deploy-package/ 2>/dev/null || true
+          cp web.config deploy-package/
           
-          # Create a minimal package.json for production if needed
+          # Copy public folder if it exists
+          if [ -d "public" ]; then
+            cp -r public deploy-package/
+          fi
+          
+          # Copy environment files if they exist
+          cp .env deploy-package/ 2>/dev/null || true
+          
+          # Install production dependencies
           cd deploy-package
-          npm ci --only=production
+          npm ci --only=production --omit=dev
           cd ..
 
       - name: Zip artifact for deployment
@@ -90,9 +101,34 @@ jobs:
           slot-name: 'Production'
           package: .
           
-      - name: 'Configure Azure Web App'
+      - name: 'Configure Azure Web App Settings'
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            az webapp config set --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name GYDJv2 --startup-file "node server.js"
-            az webapp config appsettings set --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name GYDJv2 --settings WEBSITE_NODE_DEFAULT_VERSION=~18
+            # Set Node.js version to match build
+            az webapp config appsettings set \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --name GYDJv2 \
+              --settings WEBSITE_NODE_DEFAULT_VERSION=~22
+            
+            # Set startup command
+            az webapp config set \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --name GYDJv2 \
+              --startup-file "npm start"
+            
+            # Enable logging for debugging
+            az webapp log config \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --name GYDJv2 \
+              --application-logging filesystem \
+              --level information
+            
+            # Set additional environment variables
+            az webapp config appsettings set \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --name GYDJv2 \
+              --settings \
+                NODE_ENV=production \
+                WEBSITES_ENABLE_APP_SERVICE_STORAGE=false \
+                WEBSITES_PORT=8080
