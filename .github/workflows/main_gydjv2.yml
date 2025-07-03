@@ -62,17 +62,11 @@ jobs:
           npm ci --only=production --omit=dev
           cd ..
 
-      - name: Zip artifact for deployment
-        run: |
-          cd deploy-package
-          zip -r ../release.zip .
-          cd ..
-
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: release.zip
+          path: deploy-package
 
   deploy:
     runs-on: ubuntu-latest
@@ -89,9 +83,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
+          path: deploy-package
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -102,11 +94,19 @@ jobs:
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'GYDJv2'
-          slot-name: 'Production'
-          package: .
+        run: |
+          # Deploy using Azure CLI with ZIP deployment
+          cd deploy-package
+          zip -r ../app.zip .
+          cd ..
+          
+          # Deploy the ZIP file directly without Oryx build
+          az webapp deploy \
+            --resource-group appsvc_linux_eastasia \
+            --name GYDJv2 \
+            --src-path app.zip \
+            --type zip \
+            --async false
           
       - name: 'Configure Azure Web App Settings'
         uses: azure/CLI@v1
