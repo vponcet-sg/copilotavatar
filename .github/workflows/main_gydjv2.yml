@@ -39,15 +39,34 @@ jobs:
           
           # Copy server and config files
           cp server.js deploy-package/
-          cp package.json deploy-package/
-          cp package-lock.json deploy-package/
           cp web.config deploy-package/
           
-          # Copy TypeScript config files (needed for Oryx)
-          cp tsconfig.json deploy-package/
-          cp tsconfig.app.json deploy-package/ 2>/dev/null || true
-          cp tsconfig.node.json deploy-package/ 2>/dev/null || true
-          cp vite.config.ts deploy-package/ 2>/dev/null || true
+          # Create a production-only package.json (without build scripts)
+          cat > deploy-package/package.json << 'EOF'
+          {
+            "name": "copilot-studio-speech-avatar",
+            "private": true,
+            "version": "0.0.0",
+            "type": "module",
+            "scripts": {
+              "start": "node server.js",
+              "start:prod": "NODE_ENV=production node server.js"
+            },
+            "engines": {
+              "node": ">=18.0.0"
+            },
+            "dependencies": {
+              "@azure/identity": "^4.10.1",
+              "axios": "^1.10.0",
+              "botframework-directlinejs": "^0.15.6",
+              "express": "^4.18.2",
+              "microsoft-cognitiveservices-speech-sdk": "^1.44.1",
+              "react": "^19.1.0",
+              "react-dom": "^19.1.0",
+              "uuid": "^11.1.0"
+            }
+          }
+          EOF
           
           # Copy public folder if it exists
           if [ -d "public" ]; then
@@ -59,7 +78,7 @@ jobs:
           
           # Install production dependencies only
           cd deploy-package
-          npm ci --only=production --omit=dev
+          npm install --only=production --omit=dev
           cd ..
 
       - name: Upload artifact for deployment job
@@ -114,7 +133,7 @@ jobs:
           inlineScript: |
             # Disable Oryx build since we already built locally
             az webapp config appsettings set \
-              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --resource-group appsvc_linux_eastasia \
               --name GYDJv2 \
               --settings \
                 SCM_DO_BUILD_DURING_DEPLOYMENT=false \
@@ -122,17 +141,18 @@ jobs:
                 WEBSITE_NODE_DEFAULT_VERSION=~22 \
                 NODE_ENV=production \
                 WEBSITES_ENABLE_APP_SERVICE_STORAGE=false \
-                WEBSITES_PORT=8080
+                WEBSITES_PORT=8080 \
+                WEBSITE_RUN_FROM_PACKAGE=1
             
             # Set startup command
             az webapp config set \
-              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --resource-group appsvc_linux_eastasia \
               --name GYDJv2 \
               --startup-file "npm start"
             
             # Enable logging for debugging
             az webapp log config \
-              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --resource-group appsvc_linux_eastasia \
               --name GYDJv2 \
               --application-logging filesystem \
               --level information
