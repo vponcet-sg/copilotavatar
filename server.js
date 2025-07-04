@@ -56,17 +56,17 @@ app.use((req, res, next) => {
   // Permissions Policy for microphone access
   res.setHeader('Permissions-Policy', 'microphone=(self), camera=(), geolocation=()');
   
-  // Content Security Policy - allow microphone access and blob URLs for audio processing
+  // Content Security Policy - allow microphone access and data/blob URLs for audio processing
   res.setHeader('Content-Security-Policy', 
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; " +
-    "script-src-elem 'self' 'unsafe-inline' blob:; " +
-    "worker-src 'self' blob:; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; " +
+    "script-src-elem 'self' 'unsafe-inline' blob: data:; " +
+    "worker-src 'self' blob: data:; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: blob:; " +
     "media-src 'self' blob: data:; " +
-    "connect-src 'self' wss: https: blob:; " +
-    "font-src 'self'; " +
+    "connect-src 'self' wss: https: blob: data:; " +
+    "font-src 'self' data:; " +
     "frame-src 'none';"
   );
   
