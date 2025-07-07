@@ -1,183 +1,1052 @@
-# Speech-to-Speech Live Avatar Assistant
+# 🎤🤖 Copilot Studio Speech Avatar Assistant
 
-A React TypeScript application that implements a speech-to-speech live avatar system using:
-- **Azure Speech Services** for speech recognition and synthesis
-- **Microsoft Copilot Studio** bot integration via Direct Line API
-- **Azure Avatar Real-Time API** for live video avatar generation with WebRTC
-- **Modern React** with TypeScript and Vite for fast development
+> **A cutting-edge real-time speech-to-speech avatar system** combining Azure AI Services, Microsoft Copilot Studio, and advanced WebRTC streaming for natural conversational AI experiences.
 
-## 🎯 Features
+[![Azure Web App](https://img.shields.io/badge/Azure-Web%20App-blue?logo=microsoft-azure)](https://gydjv2-cbd8hma6fvcuedh5.eastasia-01.azurewebsites.net/)
+[![React](https://img.shields.io/badge/React-19.1.0-61DAFB?logo=react)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![Azure Speech](https://img.shields.io/badge/Azure-Speech%20Services-0078D4?logo=microsoft-azure)](https://azure.microsoft.com/en-us/services/cognitive-services/speech-services/)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?logo=github)](https://gydjv2-cbd8hma6fvcuedh5.eastasia-01.azurewebsites.net/)
 
-- **Live Speech Recognition**: Real-time speech-to-text using Azure Speech Services
-- **Bot Integration**: Seamless conversation with Copilot Studio bot via Direct Line API
-- **Real-Time Avatar**: Live video avatar that speaks bot responses using Azure Avatar Real-Time API
-- **WebRTC Streaming**: Real-time video streaming with synchronized speech synthesis  
-- **Modern UI**: Responsive React interface with real-time feedback
-- **Error Handling**: Comprehensive error handling and diagnostics
-- **Environment Configuration**: Secure credential management via environment variables
+---
 
-## 🏗️ Architecture
+## 🌟 **What Makes This Special**
 
+This isn't just another chatbot – it's a **next-generation conversational AI system** that delivers human-like interactions through:
+
+- 🎯 **Real-time speech recognition** with automatic language detection
+- 🤖 **Microsoft Copilot Studio bot integration** for intelligent responses  
+- 👤 **Live video avatar** that speaks responses with perfect lip-sync
+- 🌐 **WebRTC streaming** for ultra-low latency video delivery
+- 🔄 **Continuous conversation flow** with automatic listening management
+- 🌍 **Multilingual support** with dynamic language switching
+- ⚡ **Performance-optimized** for real-time interactions
+
+---
+
+## 🏗️ **System Architecture**
+
+```mermaid
+graph TB
+    A[🎤 User Speech] --> B[Azure Speech SDK]
+    B --> C[Text Recognition]
+    C --> D[🤖 Copilot Studio Bot]
+    D --> E[Direct Line API]
+    E --> F[Bot Response]
+    F --> G[Azure Avatar Real-Time API]
+    G --> H[👤 Live Video Avatar]
+    H --> I[🔊 Speech Synthesis]
+    I --> J[📺 WebRTC Stream]
+    J --> K[🌐 User Browser]
+    
+    style A fill:#ff9999
+    style D fill:#99ccff
+    style G fill:#99ff99
+    style K fill:#ffcc99
 ```
-Speech Input → Azure Speech SDK → Text → Copilot Studio Bot → Response Text → Azure Avatar Real-Time API → Live Video + Speech
-```
 
-The application uses:
-1. **Azure Speech SDK** for speech-to-text conversion
-2. **Direct Line API** for bot communication via WebSocket
-3. **Azure Avatar Real-Time API** for generating live avatar video with WebRTC
-4. **React State Management** for coordinating the speech-to-speech pipeline
+### **Data Flow Pipeline**
+1. **🎤 Speech Input** → Azure Speech Services converts speech to text
+2. **🧠 AI Processing** → Copilot Studio bot processes the text and generates intelligent responses
+3. **👤 Avatar Generation** → Azure Avatar Real-Time API creates live video with speech synthesis
+4. **🌐 Real-time Delivery** → WebRTC streams the avatar video with synchronized audio
 
-## 🚀 Quick Start
+---
 
-### Prerequisites
+## 🎯 **Core Features**
 
-- Node.js 18+ and npm
-- Azure Speech Services resource
-- Microsoft Copilot Studio bot with Direct Line channel
-- Azure Avatar Real-Time API access (preview)
+### **🎤 Advanced Speech Recognition**
+- **Continuous Recognition**: Always listening for natural conversation flow
+- **Multilingual Auto-Detection**: Supports 10+ languages with real-time switching
+- **Language Intelligence**: Automatic voice selection based on detected language
+- **Noise Cancellation**: Optimized for various acoustic environments
+- **Real-time Feedback**: Live transcription with immediate visual feedback
 
-### Installation
+### **🤖 Intelligent Bot Integration**
+- **Microsoft Copilot Studio**: Full integration with advanced conversational AI
+- **Direct Line API**: Real-time WebSocket communication
+- **Context Awareness**: Maintains conversation context and history
+- **Rich Responses**: Supports text, cards, and multimedia content
+- **Custom Logic**: Easily extendable with custom bot behaviors
 
-1. Clone the repository:
+### **👤 Live Avatar Experience**
+- **Real-time Video**: Live avatar generation with WebRTC streaming
+- **Perfect Lip-sync**: Synchronized speech synthesis and facial animation
+- **Multiple Characters**: Choose from various avatar personas (Lisa, etc.)
+- **Custom Styles**: Different poses and presentation styles
+- **Adaptive Quality**: Dynamic quality adjustment based on connection
+
+### **🌐 Modern Web Technology**
+- **React 19**: Latest React with concurrent features
+- **TypeScript**: Full type safety and IntelliSense support
+- **Vite**: Lightning-fast development and building
+- **Express Server**: Production-ready Node.js backend
+- **Azure Deployment**: Multiple deployment options (Web Apps, Container Apps, Static Web Apps)
+
+### **🔧 Developer Experience**
+- **Comprehensive Diagnostics**: Built-in debugging and troubleshooting tools
+- **Real-time Monitoring**: Performance metrics and connection status
+- **Error Handling**: Graceful error recovery and user feedback
+- **Configuration Management**: Environment-based configuration with validation
+- **Hot Reload**: Instant development feedback
+
+---
+
+## 🚀 **Quick Start Guide**
+
+### **Prerequisites**
+
+- **Node.js** 18+ and npm
+- **Azure Subscription** with Speech Services
+- **Microsoft Copilot Studio** bot with Direct Line channel
+- **Azure Avatar Real-Time API** access (preview feature)
+
+### **Installation**
+
 ```bash
-git clone <repository-url>
+# Clone the repository
+git clone https://github.com/yourusername/copilot-studio-speech-avatar.git
 cd copilot-studio-speech-avatar
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-```
 
-3. Configure environment variables:
-```bash
+# Copy environment template
 cp .env.example .env
-```
 
-4. Update `.env` with your credentials:
-```bash
-# Azure Speech Services
-VITE_SPEECH_KEY=your_speech_key_here
-VITE_SPEECH_REGION=your_region_here  
-VITE_SPEECH_ENDPOINT=https://your-speech-resource.cognitiveservices.azure.com/
+# Configure your credentials (see configuration section)
+nano .env
 
-# Bot Framework Direct Line
-VITE_DIRECTLINE_SECRET=your_directline_secret_here
-
-# Azure Avatar Real-Time API (uses same credentials as Speech Services)
-VITE_AVATAR_SUBSCRIPTION_KEY=your_avatar_subscription_key_here
-VITE_AVATAR_REGION=your_avatar_region_here
-VITE_AVATAR_ENDPOINT=https://your-avatar-resource.cognitiveservices.azure.com/
-
-# Avatar Configuration
-VITE_AVATAR_CHARACTER=lisa
-VITE_AVATAR_STYLE=graceful-sitting
-VITE_AVATAR_VOICE=en-US-JennyNeural
-```
-
-5. Start the development server:
-```bash
+# Start development server
 npm run dev
 ```
 
-## 🔧 Configuration
+### **Environment Configuration**
 
-### Required Environment Variables
+Create a `.env` file with your Azure credentials:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_SPEECH_KEY` | Azure Speech Services subscription key | `abc123...` |
-| `VITE_SPEECH_REGION` | Azure Speech Services region | `westeurope` |
-| `VITE_SPEECH_ENDPOINT` | Azure Speech Services endpoint | `https://xxx.cognitiveservices.azure.com/` |
-| `VITE_DIRECTLINE_SECRET` | Direct Line channel secret | `xyz789...` |
-| `VITE_AVATAR_SUBSCRIPTION_KEY` | Azure Avatar API key (usually same as Speech key) | `abc123...` |
-| `VITE_AVATAR_REGION` | Azure Avatar API region | `westeurope` |
-| `VITE_AVATAR_ENDPOINT` | Azure Avatar API endpoint | `https://xxx.cognitiveservices.azure.com/` |
+```bash
+# 🔑 Azure Speech Services (Required)
+VITE_SPEECH_KEY=your_speech_subscription_key
+VITE_SPEECH_REGION=eastus
+VITE_SPEECH_ENDPOINT=https://your-speech-resource.cognitiveservices.azure.com/
 
-### Optional Configuration
+# 🤖 Bot Framework Direct Line (Required)
+VITE_DIRECTLINE_SECRET=your_directline_secret
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_AVATAR_CHARACTER` | Avatar character | `lisa` |
-| `VITE_AVATAR_STYLE` | Avatar style | `graceful-sitting` |
-| `VITE_AVATAR_VOICE` | Speech synthesis voice | `en-US-JennyNeural` |
+# 👤 Azure Avatar Real-Time API (Required)
+VITE_AVATAR_SUBSCRIPTION_KEY=your_avatar_subscription_key
+VITE_AVATAR_REGION=eastus
+VITE_AVATAR_ENDPOINT=https://your-avatar-resource.cognitiveservices.azure.com/
 
-## 🎮 Usage
-
-1. **Start Conversation**: Click the microphone button to begin speech recognition
-2. **Speak**: Talk naturally - your speech will be converted to text and sent to the bot
-3. **Watch Avatar**: The live avatar will speak the bot's response in real-time
-4. **Troubleshoot**: Use the diagnostics button for detailed system information
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-**Avatar not appearing:**
-- Check that all Avatar API credentials are correct
-- Verify WebRTC connection in browser developer tools
-- Ensure microphone permissions are granted
-
-**Speech recognition not working:**
-- Verify Azure Speech Services credentials
-- Check microphone permissions in browser
-- Ensure stable internet connection
-
-**Bot not responding:**
-- Validate Direct Line secret
-- Check bot deployment status in Copilot Studio
-- Review browser console for WebSocket errors
-
-### Diagnostics
-
-The app includes a built-in diagnostics modal that shows:
-- Configuration validation
-- Service connection status  
-- WebRTC connection details
-- Recent error logs
-
-## 🏃‍♂️ Development
-
-### Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-
-### Project Structure
-
-```
-src/
-├── components/          # React components
-│   ├── AzureAvatarPlayer.tsx
-│   ├── ConversationHistory.tsx
-│   ├── AvatarTroubleshooting.tsx
-│   └── UIComponents.tsx
-├── services/           # Core services
-│   ├── ConfigService.ts
-│   ├── SpeechService.ts
-│   ├── BotService.ts
-│   └── AzureAvatarRealTimeService.ts
-├── types/             # TypeScript definitions
-└── App.tsx           # Main application
+# 🎨 Avatar Customization (Optional)
+VITE_AVATAR_CHARACTER=lisa
+VITE_AVATAR_STYLE=casual-sitting
+VITE_AVATAR_VOICE=en-US-AvaMultilingualNeural
 ```
 
-## 🔒 Security
+---
 
-- All credentials are managed via environment variables
-- No hardcoded secrets in source code
-- Secure WebRTC connections for avatar streaming
-- Follows Azure security best practices
+## 📋 **Detailed Configuration**
 
-## 📚 References
+### **Required Services Setup**
 
-- [Azure Speech Services Documentation](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/)
-- [Azure Avatar Real-Time API](https://docs.microsoft.com/en-us/azure/ai-services/speech-service/how-to-speech-synthesis-avatar)
-- [Microsoft Bot Framework Direct Line API](https://docs.microsoft.com/en-us/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-concepts)
-- [Microsoft Copilot Studio](https://docs.microsoft.com/en-us/microsoft-copilot-studio/)
+#### **1. Azure Speech Services**
+```bash
+# Create Speech resource
+az cognitiveservices account create \
+  --name "my-speech-service" \
+  --resource-group "my-rg" \
+  --kind "SpeechServices" \
+  --sku "S0" \
+  --location "eastus"
 
-## 📄 License
+# Get keys
+az cognitiveservices account keys list \
+  --name "my-speech-service" \
+  --resource-group "my-rg"
+```
 
-MIT License - see LICENSE file for details.
+#### **2. Microsoft Copilot Studio Bot**
+1. Create bot in [Copilot Studio](https://copilotstudio.microsoft.com/)
+2. Configure Direct Line channel
+3. Copy the secret key
+4. Ensure bot is published and accessible
+
+#### **3. Azure Avatar Real-Time API**
+- Request access to the preview feature
+- Use same Speech Services resource
+- Ensure region supports Avatar API (limited regions)
+
+### **Configuration Reference**
+
+| Environment Variable | Description | Required | Example |
+|---------------------|-------------|----------|---------|
+| `VITE_SPEECH_KEY` | Azure Speech subscription key | ✅ | `abc123def456...` |
+| `VITE_SPEECH_REGION` | Azure Speech region | ✅ | `eastus` |
+| `VITE_SPEECH_ENDPOINT` | Speech Services endpoint | ✅ | `https://eastus.api.cognitive.microsoft.com/` |
+| `VITE_DIRECTLINE_SECRET` | Bot Direct Line secret | ✅ | `xyz789abc123...` |
+| `VITE_AVATAR_SUBSCRIPTION_KEY` | Avatar API key | ✅ | `def456ghi789...` |
+| `VITE_AVATAR_REGION` | Avatar API region | ✅ | `eastus` |
+| `VITE_AVATAR_ENDPOINT` | Avatar API endpoint | ✅ | `https://eastus.api.cognitive.microsoft.com/` |
+| `VITE_AVATAR_CHARACTER` | Avatar character name | ❌ | `lisa`, `casual` |
+| `VITE_AVATAR_STYLE` | Avatar pose/style | ❌ | `casual-sitting`, `graceful-sitting` |
+| `VITE_AVATAR_VOICE` | Default voice for synthesis | ❌ | `en-US-AvaMultilingualNeural` |
+
+### **Avatar Character Options**
+
+| Character | Description | Styles Available |
+|-----------|-------------|------------------|
+| `lisa` | Professional female avatar | `casual-sitting`, `graceful-sitting` |
+| `casual` | Casual male avatar | `casual-sitting`, `standing` |
+
+### **Voice Options (Multilingual)**
+
+| Voice Name | Languages | Best For |
+|-----------|-----------|----------|
+| `en-US-AvaMultilingualNeural` | 29 languages | Global applications |
+| `en-US-JennyNeural` | English | Professional settings |
+| `zh-CN-XiaoxiaoNeural` | Chinese | Chinese market |
+
+---
+
+## 🎮 **User Guide**
+
+### **Basic Usage**
+
+1. **🌐 Access the Application**
+   - Open your browser to the deployed URL
+   - Ensure microphone permissions are granted
+   - Wait for avatar session to initialize
+
+2. **🎤 Start Conversation**
+   - Click "Start Listening" to begin speech recognition
+   - Speak naturally - the system detects multiple languages
+   - Watch real-time transcription of your speech
+
+3. **🤖 Bot Interaction**
+   - Your speech is sent to the Copilot Studio bot
+   - Bot responses appear in conversation history
+   - Avatar speaks the response with lip-sync
+
+4. **🔄 Continuous Flow**
+   - System automatically manages listening states
+   - Pauses listening when avatar speaks
+   - Resumes listening after avatar finishes
+
+### **Advanced Features**
+
+#### **🌍 Language Switching**
+- Toggle between "English Only" and "Multilingual" modes
+- System automatically detects spoken language
+- Avatar responds with appropriate voice and accent
+
+#### **🔧 Diagnostics and Troubleshooting**
+- **Debug Microphone**: Test microphone setup and permissions
+- **Performance Metrics**: Monitor system performance
+- **Connection Status**: Real-time service connection monitoring
+- **Error Logging**: Detailed error information and solutions
+
+#### **⚙️ Settings Configuration**
+- Runtime configuration changes
+- Service credential updates
+- Avatar customization options
+- Voice and language preferences
+
+---
+
+## 🛠️ **Development Guide**
+
+### **Project Structure**
+
+```
+copilot-studio-speech-avatar/
+├── 📁 src/
+│   ├── 📁 components/           # React UI components
+│   │   ├── AzureAvatarPlayer.tsx       # Main avatar video player
+│   │   ├── ConversationHistory.tsx     # Chat history display
+│   │   ├── AvatarTroubleshooting.tsx   # Diagnostic tools
+│   │   ├── SettingsModal.tsx           # Configuration UI
+│   │   └── UIComponents.tsx            # Reusable UI elements
+│   ├── 📁 services/             # Core business logic
+│   │   ├── ConfigService.ts             # Configuration management
+│   │   ├── SpeechService.ts             # Azure Speech SDK wrapper
+│   │   ├── BotService.ts                # Direct Line API integration
+│   │   ├── AzureAvatarRealTimeService.ts # Avatar real-time API
+│   │   ├── AvatarService.ts             # Avatar management
+│   │   ├── FallbackAvatarService.ts     # Fallback mechanisms
+│   │   ├── HybridAvatarService.ts       # Hybrid avatar modes
+│   │   ├── LiveAvatarService.ts         # Live avatar features
+│   │   └── InitializationService.ts     # Service initialization
+│   ├── 📁 types/                # TypeScript definitions
+│   │   └── index.ts                     # All type definitions
+│   ├── App.tsx                  # Main application component
+│   ├── main.tsx                 # React application entry
+│   └── 📁 assets/               # Static assets
+├── 📁 public/                   # Public static files
+├── 📁 infra/                    # Azure infrastructure as code
+│   ├── main.bicep                       # Main Bicep template
+│   ├── main.parameters.json             # Parameter values
+│   └── abbreviations.json               # Resource naming
+├── 📁 .github/workflows/        # CI/CD pipelines
+│   ├── main_gydjv2.yml                 # Azure Web App deployment
+│   ├── container-apps-deploy.yml       # Container Apps deployment
+│   ├── swa-deploy.yml                  # Static Web Apps deployment
+│   └── azd-deploy.yml                  # Azure Developer CLI deployment
+├── server.js                    # Express.js production server
+├── package.json                 # NPM dependencies and scripts
+├── tsconfig.json               # TypeScript configuration
+├── vite.config.ts              # Vite build configuration
+└── README.md                   # This comprehensive guide
+```
+
+### **Development Scripts**
+
+```bash
+# 🚀 Development
+npm run dev              # Start development server with hot reload
+npm run build            # Build for production
+npm run preview          # Preview production build locally
+npm run lint             # Run ESLint code analysis
+
+# 🔧 Production
+npm start                # Start production server
+npm run start:prod       # Start with production environment
+
+# 🧪 Testing & Quality
+npm run lint             # Code quality checks
+npm run type-check       # TypeScript type checking
+```
+
+### **Key Service Classes**
+
+#### **🎤 SpeechService**
+```typescript
+class SpeechService {
+  // Continuous multilingual speech recognition
+  startRecognition(onRecognizing, onRecognized, onError)
+  
+  // Speech synthesis with voice selection
+  synthesizeSpeech(text, voice, language)
+  
+  // Microphone diagnostics
+  debugMicrophoneSetup()
+  
+  // Language detection and management
+  getDetectedLanguageInfo()
+}
+```
+
+#### **🤖 BotService**
+```typescript
+class BotService {
+  // Direct Line WebSocket connection
+  connect()
+  
+  // Send message to bot
+  sendMessage(text)
+  
+  // Handle bot responses
+  onBotResponse(callback)
+  
+  // Connection management
+  dispose()
+}
+```
+
+#### **👤 AzureAvatarRealTimeService**
+```typescript
+class AzureAvatarRealTimeService {
+  // Start WebRTC avatar session
+  startSession(character, style)
+  
+  // Speak text with avatar
+  speak(text, voice)
+  
+  // Auto voice selection based on language
+  speakWithAutoVoice(text, language)
+  
+  // Session management
+  stopSession()
+}
+```
+
+#### **⚙️ ConfigService**
+```typescript
+class ConfigService {
+  // Singleton pattern for global configuration
+  static getInstance()
+  
+  // Configuration validation
+  validateConfiguration()
+  
+  // Runtime updates
+  updateSettings(newSettings)
+  
+  // Service-specific configs
+  getSpeechConfig()
+  getBotConfig()
+  getAvatarConfig()
+}
+```
+
+### **State Management Architecture**
+
+The application uses React hooks and context for state management:
+
+```typescript
+// Main application state
+interface AppState {
+  isListening: boolean;
+  isProcessing: boolean;
+  isConnected: boolean;
+  currentMessage: string;
+  botResponse: string;
+  error?: string;
+}
+
+// Conversation management
+const [conversationHistory, setConversationHistory] = useState<BotMessage[]>([]);
+
+// Avatar state
+const [isAvatarSpeaking, setIsAvatarSpeaking] = useState(false);
+const [isAvatarSessionActive, setIsAvatarSessionActive] = useState(false);
+
+// Language and interaction state
+const [isMultiLingual, setIsMultiLingual] = useState(false);
+const [isMicrophoneMuted, setIsMicrophoneMuted] = useState(false);
+```
+
+---
+
+## 🚀 **Deployment Options**
+
+### **1. Azure Web App (Recommended)**
+
+Automatic deployment via GitHub Actions:
+
+```yaml
+# .github/workflows/main_gydjv2.yml
+name: Deploy to Azure Web App
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    steps:
+      - name: Build and Deploy
+        uses: azure/webapps-deploy@v3
+```
+
+**Features:**
+- ✅ Automatic HTTPS with SSL certificates
+- ✅ Custom domain support
+- ✅ Built-in monitoring and logs
+- ✅ Auto-scaling capabilities
+- ✅ Easy environment variable management
+
+### **2. Azure Container Apps**
+
+For containerized deployment:
+
+```yaml
+# .github/workflows/container-apps-deploy.yml
+name: Deploy to Container Apps
+```
+
+**Features:**
+- ✅ Kubernetes-based scaling
+- ✅ Microservices architecture ready
+- ✅ Event-driven scaling
+- ✅ Built-in service mesh
+
+### **3. Azure Static Web Apps**
+
+For static hosting with serverless API:
+
+```yaml
+# .github/workflows/swa-deploy.yml
+name: Deploy to Static Web Apps
+```
+
+**Features:**
+- ✅ Global CDN distribution
+- ✅ Serverless API functions
+- ✅ Authentication integration
+- ✅ Cost-effective for low traffic
+
+### **4. Local Development**
+
+```bash
+# Start all services locally
+npm run dev
+
+# Production build locally
+npm run build && npm run preview
+```
+
+### **Infrastructure as Code**
+
+Deploy complete infrastructure with Bicep:
+
+```bash
+# Deploy infrastructure
+az deployment group create \
+  --resource-group my-rg \
+  --template-file infra/main.bicep \
+  --parameters @infra/main.parameters.json
+```
+
+The Bicep template includes:
+- 🏗️ Azure App Service Plan
+- 🌐 Azure Web App with custom domain
+- 🔑 Azure Key Vault for secrets
+- 📊 Application Insights for monitoring
+- 🔐 Managed Identity for secure access
+
+---
+
+## 🔒 **Security & Best Practices**
+
+### **Security Features**
+
+- **🔐 Credential Management**: All secrets stored as environment variables
+- **🌐 HTTPS Enforcement**: Automatic HTTPS redirection in production
+- **🛡️ Content Security Policy**: Strict CSP for XSS protection
+- **🔑 Azure Managed Identity**: Secure service-to-service authentication
+- **📝 CORS Configuration**: Proper cross-origin resource sharing
+- **🔒 Permissions Policy**: Explicit microphone permission management
+
+### **Best Practices Implemented**
+
+```javascript
+// Security headers in server.js
+app.use((req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Permissions-Policy', 'microphone=(self)');
+  res.setHeader('Content-Security-Policy', '...');
+});
+```
+
+### **Privacy Considerations**
+
+- **🎤 Microphone Access**: Explicit user consent required
+- **📝 Data Processing**: Speech data processed in real-time, not stored
+- **🌐 Regional Compliance**: Respects data residency requirements
+- **🔄 Session Management**: Automatic cleanup of sensitive data
+
+---
+
+## 📊 **Performance Optimization**
+
+### **Real-time Performance Features**
+
+- **⚡ Ultra-low Latency**: Optimized for sub-second response times
+- **🔄 Continuous Recognition**: Eliminates start/stop delays
+- **📱 Adaptive Quality**: Dynamic quality adjustment based on connection
+- **🎯 Smart Debouncing**: Prevents duplicate message processing
+- **💾 Efficient Memory Usage**: Optimized object lifecycle management
+
+### **Monitoring and Metrics**
+
+```typescript
+// Built-in performance monitoring
+const performanceMetrics = {
+  speechRecognitionLatency: number;
+  botResponseTime: number;
+  avatarRenderingDelay: number;
+  webrtcConnectionQuality: RTCStatsReport;
+};
+```
+
+### **Optimization Techniques**
+
+1. **Speech Recognition Optimization**
+   - Reduced debounce timeouts (150ms)
+   - Optimized language detection
+   - Microphone keep-alive for instant response
+
+2. **Avatar Rendering Optimization**
+   - Minimal DOM manipulations during video playback
+   - Deferred non-critical event emissions
+   - Optimized WebRTC stream handling
+
+3. **Network Optimization**
+   - WebSocket connection pooling
+   - Efficient message serialization
+   - Adaptive streaming quality
+
+---
+
+## 🔍 **Troubleshooting Guide**
+
+### **Common Issues & Solutions**
+
+#### **🎤 Microphone Not Working**
+
+**Symptoms**: No speech recognition, permission denied errors
+
+**Solutions**:
+```bash
+# Check HTTPS requirement
+- Ensure app is accessed via HTTPS (required for microphone)
+- Check browser console for permission errors
+- Use Debug Microphone button for diagnostics
+
+# Browser-specific fixes
+Chrome: chrome://settings/content/microphone
+Firefox: about:preferences#privacy
+Safari: Preferences > Websites > Microphone
+```
+
+#### **👤 Avatar Not Appearing**
+
+**Symptoms**: Black video area, connection errors
+
+**Solutions**:
+```bash
+# Check credentials
+- Verify VITE_AVATAR_SUBSCRIPTION_KEY is correct
+- Ensure VITE_AVATAR_REGION matches your resource
+- Confirm Avatar API access is enabled
+
+# Network troubleshooting
+- Check WebRTC connection in browser DevTools
+- Verify firewall allows WebRTC traffic
+- Test with different network connection
+```
+
+#### **🤖 Bot Not Responding**
+
+**Symptoms**: Messages sent but no bot responses
+
+**Solutions**:
+```bash
+# Bot configuration
+- Verify VITE_DIRECTLINE_SECRET is valid
+- Check bot is published in Copilot Studio
+- Ensure Direct Line channel is enabled
+
+# Connection debugging
+- Monitor WebSocket connection in DevTools
+- Check bot logs in Copilot Studio
+- Verify bot endpoint is accessible
+```
+
+### **Diagnostic Tools**
+
+#### **Built-in Diagnostics**
+
+```typescript
+// Use the diagnostic modal
+- Click "🔧 Diagnostics" button
+- Run "🔍 Debug Microphone" test
+- Check "🚀 Performance" metrics
+- Review connection status indicators
+```
+
+#### **Browser Developer Tools**
+
+```bash
+# Console commands for debugging
+console.log('Speech config:', speechService.getConfig());
+console.log('Bot connection:', botService.getConnectionState());
+console.log('Avatar session:', avatarService.getSessionInfo());
+```
+
+#### **Network Debugging**
+
+```bash
+# WebRTC connection diagnostics
+chrome://webrtc-internals/  # Chrome
+about:webrtc               # Firefox
+```
+
+### **Error Codes Reference**
+
+| Error Code | Description | Solution |
+|------------|-------------|----------|
+| `SPEECH_001` | Invalid subscription key | Check VITE_SPEECH_KEY |
+| `SPEECH_002` | Region mismatch | Verify VITE_SPEECH_REGION |
+| `BOT_001` | Direct Line connection failed | Check VITE_DIRECTLINE_SECRET |
+| `BOT_002` | Bot not responding | Verify bot is published |
+| `AVATAR_001` | Session initialization failed | Check avatar credentials |
+| `AVATAR_002` | WebRTC connection error | Check network/firewall |
+| `MIC_001` | Microphone permission denied | Enable microphone in browser |
+| `MIC_002` | HTTPS required | Access app via HTTPS |
+
+---
+
+## 🧪 **Testing & Quality Assurance**
+
+### **Testing Strategy**
+
+```bash
+# Manual testing checklist
+□ Microphone permission and speech recognition
+□ Bot conversation flow
+□ Avatar video and speech synthesis
+□ Language switching functionality
+□ Error handling and recovery
+□ Performance under various conditions
+□ Cross-browser compatibility
+□ Mobile device testing
+```
+
+### **Performance Testing**
+
+```typescript
+// Built-in performance monitoring
+const testPerformance = () => {
+  // Speech recognition latency
+  const speechLatency = measureSpeechRecognitionTime();
+  
+  // Bot response time
+  const botLatency = measureBotResponseTime();
+  
+  // Avatar rendering delay
+  const avatarLatency = measureAvatarRenderingTime();
+  
+  // Overall system performance
+  const systemPerformance = calculateOverallPerformance();
+};
+```
+
+### **Browser Compatibility**
+
+| Browser | Version | Speech | Avatar | WebRTC | Status |
+|---------|---------|--------|--------|--------|--------|
+| Chrome | 90+ | ✅ | ✅ | ✅ | Full Support |
+| Firefox | 88+ | ✅ | ✅ | ✅ | Full Support |
+| Safari | 14+ | ✅ | ✅ | ⚠️ | Limited WebRTC |
+| Edge | 90+ | ✅ | ✅ | ✅ | Full Support |
+| Mobile Chrome | Latest | ✅ | ✅ | ✅ | Full Support |
+| Mobile Safari | Latest | ✅ | ⚠️ | ⚠️ | Limited Features |
+
+---
+
+## 📚 **API Reference**
+
+### **Configuration API**
+
+```typescript
+interface ConfigService {
+  // Validate all configurations
+  validateConfiguration(): {
+    isValid: boolean;
+    errors: string[];
+  };
+  
+  // Get service-specific configurations
+  getSpeechConfig(): SpeechConfig;
+  getBotConfig(): BotConfig;
+  getAvatarConfig(): AvatarConfig;
+  getMultiLingualConfig(): MultiLingualConfig;
+  
+  // Runtime updates
+  updateSettings(settings: Partial<DynamicConfig>): void;
+}
+```
+
+### **Speech Service API**
+
+```typescript
+interface SpeechService {
+  // Start continuous speech recognition
+  startRecognition(
+    onRecognizing: (text: string) => void,
+    onRecognized: (text: string) => void,
+    onError: (error: string) => void
+  ): Promise<void>;
+  
+  // Stop speech recognition
+  stopRecognition(): Promise<void>;
+  
+  // Check microphone permissions
+  checkMicrophonePermission(): Promise<boolean>;
+  
+  // Diagnostic utilities
+  debugMicrophoneSetup(): Promise<DiagnosticResult>;
+  
+  // Language detection
+  getDetectedLanguageInfo(): LanguageInfo;
+}
+```
+
+### **Bot Service API**
+
+```typescript
+interface BotService {
+  // Connect to Direct Line
+  connect(): Promise<void>;
+  
+  // Send message to bot
+  sendMessage(text: string): Promise<void>;
+  
+  // Dispose connection
+  dispose(): void;
+  
+  // Get connection state
+  getConnectionState(): ConnectionState;
+}
+```
+
+### **Avatar Service API**
+
+```typescript
+interface AzureAvatarRealTimeService {
+  // Session management
+  startSession(
+    character: string,
+    style: string,
+    videoElementId?: string
+  ): Promise<void>;
+  
+  stopSession(): Promise<void>;
+  
+  // Speech synthesis
+  speak(text: string, voice: string): Promise<void>;
+  
+  speakWithAutoVoice(
+    text: string,
+    language?: string
+  ): Promise<void>;
+  
+  // Session info
+  getSessionInfo(): AvatarSessionInfo;
+}
+```
+
+---
+
+## 🌍 **Internationalization & Localization**
+
+### **Supported Languages**
+
+| Language | Code | Voice | Auto-Detection | Status |
+|----------|------|-------|----------------|--------|
+| English (US) | `en-US` | `en-US-AvaMultilingualNeural` | ✅ | Full Support |
+| Spanish | `es-ES` | `es-ES-ElviraNeural` | ✅ | Full Support |
+| French | `fr-FR` | `fr-FR-DeniseNeural` | ✅ | Full Support |
+| German | `de-DE` | `de-DE-KatjaNeural` | ✅ | Full Support |
+| Italian | `it-IT` | `it-IT-ElsaNeural` | ✅ | Full Support |
+| Portuguese | `pt-BR` | `pt-BR-FranciscaNeural` | ✅ | Full Support |
+| Chinese | `zh-CN` | `zh-CN-XiaoxiaoNeural` | ✅ | Full Support |
+| Japanese | `ja-JP` | `ja-JP-NanamiNeural` | ✅ | Full Support |
+| Korean | `ko-KR` | `ko-KR-SunHiNeural` | ✅ | Full Support |
+| Hindi | `hi-IN` | `hi-IN-SwaraNeural` | ✅ | Full Support |
+
+### **Language Configuration**
+
+```typescript
+// Enable multilingual mode
+const multiLingualConfig = {
+  autoDetect: true,
+  primaryLanguage: 'en-US',
+  supportedLanguages: [
+    'en-US', 'es-ES', 'fr-FR', 'de-DE', 'it-IT',
+    'pt-BR', 'zh-CN', 'ja-JP', 'ko-KR', 'hi-IN'
+  ]
+};
+```
+
+### **Localization Features**
+
+- **🌐 Automatic Language Detection**: Real-time speech language detection
+- **🎙️ Voice Matching**: Automatic voice selection based on detected language
+- **🔄 Dynamic Switching**: Seamless language switching mid-conversation
+- **📝 UI Localization**: Interface text adapts to detected language
+- **🎭 Avatar Localization**: Cultural and linguistic avatar behaviors
+
+---
+
+## 🔗 **External Dependencies & Licenses**
+
+### **Core Dependencies**
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| `react` | 19.1.0 | MIT | UI framework |
+| `typescript` | 5.8.3 | Apache-2.0 | Type safety |
+| `vite` | 7.0.0 | MIT | Build tool |
+| `express` | 4.18.2 | MIT | Server framework |
+| `microsoft-cognitiveservices-speech-sdk` | 1.44.1 | Microsoft | Speech services |
+| `botframework-directlinejs` | 0.15.6 | MIT | Bot integration |
+| `@azure/identity` | 4.10.1 | MIT | Azure authentication |
+
+### **Development Dependencies**
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| `@vitejs/plugin-react` | 4.5.2 | MIT | React Vite integration |
+| `eslint` | 9.29.0 | MIT | Code linting |
+| `typescript-eslint` | 8.34.1 | MIT | TypeScript ESLint |
+
+### **Azure Services Used**
+
+- **Azure Speech Services**: Speech-to-text, text-to-speech, and avatar generation
+- **Azure Avatar Real-Time API**: Live video avatar with WebRTC
+- **Azure App Service**: Web application hosting
+- **Azure Key Vault**: Secure credential storage
+- **Application Insights**: Monitoring and diagnostics
+
+---
+
+## 🤝 **Contributing**
+
+### **Contributing Guidelines**
+
+We welcome contributions! Please follow these guidelines:
+
+1. **🍴 Fork the Repository**
+   ```bash
+   git fork https://github.com/yourusername/copilot-studio-speech-avatar
+   ```
+
+2. **🌿 Create Feature Branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+
+3. **✍️ Make Changes**
+   - Follow TypeScript best practices
+   - Add comprehensive documentation
+   - Include unit tests where applicable
+   - Ensure accessibility compliance
+
+4. **🧪 Test Changes**
+   ```bash
+   npm run lint
+   npm run build
+   npm run test
+   ```
+
+5. **📝 Submit Pull Request**
+   - Provide detailed description
+   - Include screenshots/videos for UI changes
+   - Reference relevant issues
+
+### **Development Setup**
+
+```bash
+# Clone and setup development environment
+git clone https://github.com/yourusername/copilot-studio-speech-avatar.git
+cd copilot-studio-speech-avatar
+
+# Install dependencies
+npm install
+
+# Setup environment
+cp .env.example .env
+# Configure your .env file
+
+# Start development
+npm run dev
+```
+
+### **Code Style Guidelines**
+
+- **TypeScript**: Strict mode enabled, full type coverage
+- **ESLint**: Follow configured linting rules
+- **Formatting**: Use Prettier for consistent formatting
+- **Comments**: Document complex logic and APIs
+- **Testing**: Write tests for new features
+
+---
+
+## 📋 **Changelog**
+
+### **Version 1.0.0** (Current)
+- ✅ Initial release with full speech-to-speech avatar functionality
+- ✅ Azure Speech Services integration
+- ✅ Microsoft Copilot Studio bot integration
+- ✅ Azure Avatar Real-Time API implementation
+- ✅ Multilingual support with auto-detection
+- ✅ WebRTC streaming for live avatar video
+- ✅ Comprehensive diagnostics and troubleshooting
+- ✅ Multiple deployment options (Web App, Container Apps, Static Web Apps)
+- ✅ Full TypeScript implementation
+- ✅ Modern React 19 with concurrent features
+
+### **Planned Features** (Roadmap)
+- 🔄 Enhanced avatar customization options
+- 🎨 Additional avatar characters and styles
+- 📱 Progressive Web App (PWA) support
+- 🔊 Audio effects and voice modulation
+- 📊 Advanced analytics and usage metrics
+- 🌐 Additional language support
+- 🎮 Interactive gesture recognition
+- 🤖 Multiple bot integration options
+
+---
+
+## 📄 **License**
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+```
+MIT License
+
+Copyright (c) 2025 Copilot Studio Speech Avatar Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+```
+
+---
+
+## 🙏 **Acknowledgments**
+
+- **Microsoft Azure Team** for providing world-class AI services
+- **Microsoft Copilot Studio Team** for conversational AI platform
+- **React Team** for the amazing UI framework
+- **TypeScript Team** for type safety and developer experience
+- **Vite Team** for lightning-fast build tools
+- **Open Source Community** for the incredible ecosystem
+
+---
+
+## 📞 **Support & Contact**
+
+### **Getting Help**
+
+- **📖 Documentation**: Read this comprehensive guide
+- **🔧 Built-in Diagnostics**: Use the app's diagnostic tools
+- **🐛 Issues**: Report bugs on GitHub Issues
+- **💬 Discussions**: Join GitHub Discussions for questions
+- **📧 Direct Contact**: [your-email@domain.com](mailto:your-email@domain.com)
+
+### **Community Resources**
+
+- **🐦 Twitter**: [@YourHandle](https://twitter.com/yourhandle) - Latest updates
+- **📺 YouTube**: [Channel Link](https://youtube.com/channel) - Video tutorials
+- **📝 Blog**: [Blog Link](https://yourblog.com) - Technical deep dives
+- **💼 LinkedIn**: [Your Profile](https://linkedin.com/in/you) - Professional updates
+
+---
+
+## 🎉 **Ready to Get Started?**
+
+```bash
+# Quick start in 3 commands
+git clone https://github.com/yourusername/copilot-studio-speech-avatar.git
+cd copilot-studio-speech-avatar
+npm install && npm run dev
+```
+
+**🌟 Star this repository if you found it helpful!**
+
+**🔗 Try the live demo**: [https://gydjv2-cbd8hma6fvcuedh5.eastasia-01.azurewebsites.net/](https://gydjv2-cbd8hma6fvcuedh5.eastasia-01.azurewebsites.net/)
+
+---
+
+*Built with ❤️ by developers who believe in the power of conversational AI*
