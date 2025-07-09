@@ -6,16 +6,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    sourcemap: false,
-    // Ensure assets are properly handled for production
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          azure: ['@azure/identity', 'microsoft-cognitiveservices-speech-sdk']
-        }
-      }
-    }
+    sourcemap: false
   },
   server: {
     port: 3000,

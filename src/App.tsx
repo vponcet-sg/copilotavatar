@@ -7,8 +7,6 @@ import ConfigService from './services/ConfigService';
 import { ErrorBanner, StatusButton } from './components/UIComponents';
 import { AzureAvatarPlayer } from './components/AzureAvatarPlayer';
 import { ConversationHistory } from './components/ConversationHistory';
-import { AvatarTroubleshooting } from './components/AvatarTroubleshooting';
-import { SettingsModal } from './components/SettingsModal';
 import './App.css';
 
 const App: React.FC = () => {
@@ -27,8 +25,6 @@ const App: React.FC = () => {
   const [isAvatarSessionActive, setIsAvatarSessionActive] = useState(false);
   const [avatarConnectionState, setAvatarConnectionState] = useState<string>('disconnected');
   const [avatarLastEvent, setAvatarLastEvent] = useState<string>('');
-  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [isMultiLingual, setIsMultiLingual] = useState(false); // Default to English-only
   const [isMicrophoneMuted, setIsMicrophoneMuted] = useState(false); // Microphone mute state - listening is on by default
   
@@ -522,25 +518,6 @@ const App: React.FC = () => {
     }
   }, [isMultiLingual, appState.isListening, isMicrophoneMuted, addNotification, startListening]);
 
-  // Handle settings save
-  const handleSettingsSave = useCallback((newSettings: any) => {
-    const configService = ConfigService.getInstance();
-    configService.updateSettings({
-      speechKey: newSettings.speechKey,
-      speechRegion: newSettings.speechRegion,
-      speechEndpoint: newSettings.speechEndpoint,
-      directLineSecret: newSettings.directLineSecret,
-      avatarCharacter: newSettings.avatarCharacter,
-      avatarStyle: newSettings.avatarStyle,
-      avatarVoice: newSettings.avatarVoice,
-      avatarSubscriptionKey: newSettings.avatarSubscriptionKey,
-      avatarRegion: newSettings.avatarRegion,
-      avatarEndpoint: newSettings.avatarEndpoint,
-    });
-    
-    addNotification('Settings saved successfully! Please refresh to apply changes.', 'success');
-  }, [addNotification]);
-
   // Handle language change
   // Automatically manage listening state based on avatar speaking
   useEffect(() => {
@@ -595,13 +572,6 @@ const App: React.FC = () => {
       <header className="app-header">
         <h1>🎤 Speech-to-Speech Avatar Assistant</h1>
         <div className="header-controls">
-          <button
-            className="settings-button-header"
-            onClick={() => setShowSettings(true)}
-            title="Settings"
-          >
-            ⚙️
-          </button>
           <StatusButton 
             isSessionActive={isAvatarSessionActive}
             connectionState={avatarConnectionState}
@@ -725,13 +695,6 @@ const App: React.FC = () => {
               >
                 🚀 Performance
               </button>
-              
-              <button
-                className="control-button secondary"
-                onClick={() => setShowTroubleshooting(true)}
-              >
-                🔧 Diagnostics
-              </button>
             </div>
           </div>
 
@@ -761,19 +724,6 @@ const App: React.FC = () => {
         {/* Conversation History */}
         <ConversationHistory messages={conversationHistory} />
       </main>
-
-      {/* Troubleshooting Modal */}
-      <AvatarTroubleshooting 
-        show={showTroubleshooting}
-        onClose={() => setShowTroubleshooting(false)}
-      />
-
-      {/* Settings Modal */}
-      <SettingsModal
-        show={showSettings}
-        onClose={() => setShowSettings(false)}
-        onSave={handleSettingsSave}
-      />
 
       <footer className="app-footer">
         <p>Powered by Azure Speech Services & Copilot Studio</p>
