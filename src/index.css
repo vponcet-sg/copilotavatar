@@ -20,12 +20,14 @@
 
 body {
   margin: 0;
-  min-width: 320px;
+  min-width: 600px; /* Ensure minimum width for fixed layout */
   min-height: 100vh;
+  overflow-x: auto; /* Allow horizontal scroll when needed */
 }
 
 #root {
   width: 100%;
+  min-width: 600px; /* Match body minimum width */
   min-height: 100vh;
 }
 

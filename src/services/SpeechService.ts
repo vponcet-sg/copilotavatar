@@ -390,42 +390,8 @@ export class SpeechService {
    */
   private getDetectedLanguage(result: SpeechSDK.SpeechRecognitionResult): string | null {
     try {
-      // Primary method: Get language from auto-detection result using Azure SDK best practices
-      const autoDetectResult = SpeechSDK.AutoDetectSourceLanguageResult.fromResult(result);
-      if (autoDetectResult && autoDetectResult.language) {
-        console.log('🌐 Auto-detected language (Azure SDK method):', autoDetectResult.language);
-        return autoDetectResult.language;
-      }
-      
-      // Secondary method: Try to get from result properties for continuous LID
-      const languageProperty = result.properties.getProperty(SpeechSDK.PropertyId.SpeechServiceConnection_AutoDetectSourceLanguages);
-      if (languageProperty) {
-        console.log('🌐 Language from continuous LID properties:', languageProperty);
-        return languageProperty;
-      }
-      
-      // Tertiary method: Parse JSON result for additional language information
-      const detectedLanguageProperty = result.properties.getProperty(SpeechSDK.PropertyId.SpeechServiceResponse_JsonResult);
-      if (detectedLanguageProperty) {
-        try {
-          const parsed = JSON.parse(detectedLanguageProperty);
-          if (parsed.Language) {
-            console.log('🌐 Language from JSON result:', parsed.Language);
-            return parsed.Language;
-          }
-          // Check for language in NBest results (multiple recognition candidates)
-          if (parsed.NBest && parsed.NBest.length > 0 && parsed.NBest[0].Language) {
-            console.log('🌐 Language from NBest results:', parsed.NBest[0].Language);
-            return parsed.NBest[0].Language;
-          }
-        } catch (error) {
-          console.warn('Failed to parse language from JSON result:', error);
-        }
-      }
-      
-      // Fallback: return current language for valid speech results
+      // Simplified language detection - just return current language for valid speech results
       if (result.text && result.text.trim()) {
-        console.log('🌐 Using current language as fallback:', this.currentLanguage);
         return this.currentLanguage;
       }
     } catch (error) {

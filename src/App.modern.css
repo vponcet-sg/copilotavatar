@@ -65,17 +65,19 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow-x: auto; /* Allow horizontal scroll */
   min-height: 100vh;
+  min-width: 900px; /* Ensure minimum width */
 }
 
 .app {
   min-height: 100vh;
+  min-width: 900px; /* Ensure minimum width */
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* Allow content to extend */
 }
 
 .app::before {
@@ -207,18 +209,18 @@ body {
   transform: scale(1.05);
 }
 
-/* Main Layout - Modern grid system */
+/* Main Layout - Fixed two-column system that never shifts */
 .app-layout {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 420px;
   gap: var(--spacing-2xl);
   padding: var(--spacing-2xl);
-  max-width: 1600px;
-  margin: 0 auto;
+  min-width: 900px; /* Minimum width to maintain layout */
   width: 100%;
   position: relative;
   z-index: 1;
+  overflow-x: auto; /* Allow horizontal scroll if needed */
 }
 
 /* Avatar Section - Enhanced glassmorphism without hover effects */
@@ -1040,13 +1042,12 @@ button, .input-group, .message-content, .notification {
   box-shadow: var(--shadow-lg);
 }
 
-/* Responsive Design - Enhanced for modern devices */
+/* Responsive Design - Fixed layout with scaling only */
 @media (max-width: 1200px) {
   .app-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
     gap: var(--spacing-xl);
     padding: var(--spacing-xl);
+    min-width: 800px; /* Slightly smaller minimum */
   }
   
   .avatar-section {
@@ -1054,15 +1055,17 @@ button, .input-group, .message-content, .notification {
   }
   
   .avatar-video-container {
-    max-width: 400px;
+    max-width: 350px;
     aspect-ratio: 9/16;
   }
 }
 
 @media (max-width: 768px) {
   .app-layout {
-    padding: var(--spacing-lg);
     gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    min-width: 700px; /* Maintain two-column layout */
+    grid-template-columns: 1fr 350px; /* Slightly smaller chat section */
   }
   
   .avatar-section {
@@ -1075,13 +1078,14 @@ button, .input-group, .message-content, .notification {
   }
   
   .avatar-video-container {
-    max-width: 300px;
+    max-width: 280px;
     aspect-ratio: 9/16;
     border-radius: var(--radius-lg);
   }
   
   .message {
-    max-width: 90%;
+    max-width: 95%;
+    font-size: 0.9rem;
   }
   
   .notifications {
@@ -1093,31 +1097,38 @@ button, .input-group, .message-content, .notification {
   .notification {
     min-width: auto;
     padding: var(--spacing-md);
+    font-size: 0.9rem;
   }
   
   .messages-container {
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
   }
   
   .input-area {
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
   }
   
   .chat-input-container {
-    flex-direction: column;
-    gap: var(--spacing-md);
-    align-items: center;
+    gap: var(--spacing-sm);
+  }
+  
+  .voice-button, .send-button, .clear-button {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 1.1rem;
   }
 }
 
 @media (max-width: 480px) {
   .app-layout {
-    padding: var(--spacing-md);
     gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    min-width: 600px; /* Maintain two-column layout even on phones */
+    grid-template-columns: 1fr 300px; /* Even smaller chat section */
   }
   
   .avatar-section {
-    min-height: 40vh;
+    min-height: 45vh;
     border-radius: var(--radius-lg);
   }
   
@@ -1126,7 +1137,7 @@ button, .input-group, .message-content, .notification {
   }
   
   .avatar-video-container {
-    max-width: 280px;
+    max-width: 240px;
     aspect-ratio: 9/16;
   }
   
@@ -1137,39 +1148,28 @@ button, .input-group, .message-content, .notification {
   }
   
   .input-area {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
   }
   
   .chat-input-container {
-    flex-direction: column;
-    gap: var(--spacing-md);
-    align-items: center;
-  }
-  
-  .quick-actions {
-    justify-content: center;
-    width: 100%;
-  }
-  
-  .messages-container {
-    padding: var(--spacing-md);
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
   }
   
   .message-content {
-    padding: var(--spacing-md);
-    font-size: 0.9rem;
+    padding: var(--spacing-sm);
+    font-size: 0.85rem;
   }
   
   .voice-button, .send-button, .clear-button {
-    min-width: 48px;
-    min-height: 48px;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 1rem;
   }
   
   .status-indicator {
-    bottom: var(--spacing-md);
-    left: var(--spacing-md);
-    padding: var(--spacing-sm) var(--spacing-md);
+    bottom: var(--spacing-sm);
+    left: var(--spacing-sm);
+    padding: var(--spacing-sm);
     font-size: 0.8rem;
   }
 }
