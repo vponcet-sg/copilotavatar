@@ -70,7 +70,7 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
       <video
         ref={videoRef}
         id="avatarVideo"
-        className="avatar-video"
+        className={`avatar-video ${(!isSessionActive || connectionState !== 'connected') ? 'hidden' : ''}`}
         autoPlay
         playsInline
         muted={false}
@@ -96,17 +96,20 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
         }}
       />
       
-      {!isSessionActive && (
+      {(!isSessionActive || connectionState !== 'connected') && (
         <div className="avatar-placeholder">
-          <div>🎭</div>
-          <p>Avatar Initializing...</p>
-        </div>
-      )}
-      
-      {isSessionActive && connectionState !== 'connected' && (
-        <div className="avatar-placeholder">
-          <div className="spinner"></div>
-          <p>Connecting...</p>
+          <div className="avatar-loading">
+            <div className="loading-spinner"></div>
+            <div className="loading-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div className="avatar-emoji">
+            {!isSessionActive ? '🎭' : '🔗'}
+          </div>
+          <p>{!isSessionActive ? 'Avatar Initializing...' : 'Connecting...'}</p>
         </div>
       )}
     </div>

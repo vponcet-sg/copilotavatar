@@ -17,8 +17,23 @@ export const ConversationHistory = ({ messages }: ConversationHistoryProps) => {
     return (
       <div className="conversation-history empty">
         <div className="empty-state">
-          <div className="empty-icon">�</div>
-          <p>Start a conversation...</p>
+          <div className="empty-icon">💬</div>
+          <h3>Welcome to Your AI Assistant</h3>
+          <p>Start a conversation by typing a message or using voice input</p>
+          <div className="empty-features">
+            <div className="feature">
+              <span className="feature-icon">🎤</span>
+              <span>Voice Recognition</span>
+            </div>
+            <div className="feature">
+              <span className="feature-icon">🎭</span>
+              <span>AI Avatar</span>
+            </div>
+            <div className="feature">
+              <span className="feature-icon">⚡</span>
+              <span>Real-time Responses</span>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -27,7 +42,7 @@ export const ConversationHistory = ({ messages }: ConversationHistoryProps) => {
   return (
     <div className="conversation-history">
       <div className="messages-container">
-        {messages.map((message) => (
+        {messages.map((message, index) => (
           <div key={message.id} className={`message ${message.type}`}>
             <div className="message-content">
               <p>{message.text}</p>
