@@ -35,15 +35,15 @@ export class SpeechService {
     // Performance optimizations for Azure Speech SDK
     this.speechConfig.setProperty(
       SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs,
-      '3000' // Longer initial silence to capture speech better
+      '2000' // Reduced from 3000ms for faster startup
     );
     this.speechConfig.setProperty(
       SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs,
-      '1500' // Longer end silence to capture complete phrases
+      '1000' // Reduced from 1500ms for faster response
     );
     this.speechConfig.setProperty(
       SpeechSDK.PropertyId.Speech_SegmentationSilenceTimeoutMs,
-      '1000' // Longer segmentation for better speech detection
+      '500' // Reduced from 1000ms for faster voice detection
     );
     
     // Microphone configuration
@@ -84,6 +84,67 @@ export class SpeechService {
     
     // Additional optimizations for always-on mode
     console.log('🎤 Microphone configured for English-only instant voice capture');
+    
+    // Pre-warm the microphone connection to reduce startup delay
+    this.preWarmMicrophone();
+  }
+
+  /**
+   * Pre-warm microphone connection to reduce speech recognition startup delay
+   */
+  private async preWarmMicrophone(): Promise<void> {
+    try {
+      console.log('🔥 Pre-warming microphone connection...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: { 
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000 // Optimize for speech recognition
+        } 
+      });
+      
+      // Keep connection alive briefly then close
+      setTimeout(() => {
+        stream.getTracks().forEach(track => track.stop());
+        console.log('✅ Microphone pre-warming completed');
+      }, 200);
+    } catch (error) {
+      console.warn('Microphone pre-warming failed (non-critical):', error);
+    }
+  }
+
+  /**
+   * Pre-initialize speech recognizer for faster startup
+   */
+  public async preInitializeRecognizer(): Promise<void> {
+    try {
+      console.log('🚀 Pre-initializing speech recognizer...');
+      
+      // Create a temporary recognizer to warm up the connection
+      const tempConfig = SpeechSDK.SpeechConfig.fromSubscription(
+        this.speechConfig.authorizationToken || this.speechConfig.subscriptionKey,
+        this.speechConfig.region
+      );
+      tempConfig.speechRecognitionLanguage = 'en-US';
+      
+      const tempRecognizer = new SpeechSDK.SpeechRecognizer(tempConfig, this.audioConfig!);
+      
+      // Clean up immediately
+      setTimeout(() => {
+        tempRecognizer.close();
+        console.log('✅ Speech recognizer pre-initialization completed');
+      }, 100);
+    } catch (error) {
+      console.warn('Speech recognizer pre-initialization failed (non-critical):', error);
+    }
+  }
+
+  /**
+   * Check if speech recognition is currently active
+   */
+  public isRecognitionActive(): boolean {
+    return this.speechRecognizer !== null;
   }
 
   /**
@@ -198,10 +259,10 @@ export class SpeechService {
             // Keep microphone connection alive immediately
             this.keepMicrophoneAlive();
             
-            // Set up periodic keep-alive to ensure microphone stays active
+            // Set up more frequent keep-alive to ensure microphone stays active
             this.microphoneKeepAliveInterval = setInterval(() => {
               this.keepMicrophoneAlive();
-            }, 30000); // Keep alive every 30 seconds
+            }, 15000); // Keep alive every 15 seconds instead of 30
             
             resolve();
           },

@@ -59,6 +59,9 @@ const App: React.FC = () => {
         botServiceRef.current = new BotService();
         azureAvatarServiceRef.current = new AzureAvatarRealTimeService();
 
+        // Pre-initialize speech recognizer for faster startup
+        await speechServiceRef.current.preInitializeRecognizer();
+
         // Connect to bot
         await botServiceRef.current.connect();
         
@@ -75,6 +78,26 @@ const App: React.FC = () => {
           error: undefined
         }));
         setIsAvatarSessionActive(true);
+
+        // Auto-start speech recognition when avatar session is active
+        console.log('🎤 Auto-starting speech recognition with avatar session...');
+        try {
+          // Check microphone permission first
+          const hasPermission = await speechServiceRef.current.checkMicrophonePermission();
+          if (hasPermission) {
+            // Auto-start listening when avatar becomes active
+            setTimeout(async () => {
+              if (!appState.isListening && !isMicrophoneMuted) {
+                await startListening();
+                console.log('✅ Speech recognition auto-started with avatar session');
+              }
+            }, 500); // Small delay to ensure avatar is fully initialized
+          } else {
+            console.log('⚠️ Microphone permission not granted, user will need to manually start listening');
+          }
+        } catch (error) {
+          console.warn('Failed to auto-start speech recognition:', error);
+        }
 
         console.log('All services initialized successfully');
       } catch (error) {
@@ -204,6 +227,14 @@ const App: React.FC = () => {
       return;
     }
 
+    // Check if recognition is already active
+    if (speechServiceRef.current.isRecognitionActive()) {
+      console.log('🎤 Speech recognition already active, skipping startup');
+      setAppState(prev => ({ ...prev, isListening: true }));
+      setIsMicrophoneMuted(false);
+      return;
+    }
+
     try {
       // Enhanced microphone permission check with better error messages
       console.log('🎤 Checking microphone permission...');
@@ -273,7 +304,7 @@ const App: React.FC = () => {
               messageTimeoutRef.current = null;
             }
             
-            // Ultra-reduced debounce timeout for real-time response (150ms instead of 300ms)
+            // Ultra-reduced debounce timeout for real-time response (100ms instead of 150ms)
             messageTimeoutRef.current = setTimeout(async () => {
               try {
                 isProcessingMessageRef.current = true;
@@ -441,12 +472,12 @@ const App: React.FC = () => {
                !appState.isProcessing && !isMicrophoneMuted) {
         console.log('🎭 Avatar stopped speaking, automatically restarting speech recognition');
         try {
-          // Wait a short delay to ensure avatar has fully stopped
+          // Reduced delay for faster response
           setTimeout(async () => {
             if (!appState.isListening && !isAvatarSpeaking && appState.isConnected && !isMicrophoneMuted) {
               await startListening();
             }
-          }, 1000); // 1 second delay
+          }, 300); // Reduced from 1000ms to 300ms
         } catch (error) {
           console.warn('Failed to restart speech recognition when avatar stopped speaking:', error);
         }
@@ -490,7 +521,21 @@ const App: React.FC = () => {
           <AzureAvatarPlayer 
             isSessionActive={isAvatarSessionActive}
             isSpeaking={isAvatarSpeaking}
-            onSessionStart={() => addNotification('Avatar session started', 'success')}
+            onSessionStart={() => {
+              addNotification('Avatar session started', 'success');
+              // Auto-start speech recognition when avatar session starts
+              console.log('🎤 Avatar session started - auto-starting speech recognition...');
+              setTimeout(async () => {
+                if (!appState.isListening && !isMicrophoneMuted && speechServiceRef.current) {
+                  try {
+                    await startListening();
+                    console.log('✅ Speech recognition auto-started with avatar session');
+                  } catch (error) {
+                    console.warn('Failed to auto-start speech recognition:', error);
+                  }
+                }
+              }, 100); // Minimal delay for immediate startup
+            }}
             onSessionStop={() => addNotification('Avatar session stopped', 'info')}
             onSpeakingStart={() => {
               console.log('Avatar started speaking (from player)');
