@@ -63,21 +63,43 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
+  margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: auto; /* Allow horizontal scroll */
+  overflow-x: hidden; /* Prevent horizontal scroll */
   min-height: 100vh;
-  min-width: 900px; /* Ensure minimum width */
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  width: 100%;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+  /* Prevent zoom on input focus on iOS */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Re-enable text selection for content areas */
+.message-content, .chat-input, .empty-state {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
 }
 
 .app {
   min-height: 100vh;
-  min-width: 900px; /* Ensure minimum width */
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  width: 100%;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
   position: relative;
-  overflow: visible; /* Allow content to extend */
+  overflow: hidden; /* Prevent overflow */
 }
 
 .app::before {
@@ -209,29 +231,27 @@ body {
   transform: scale(1.05);
 }
 
-/* Main Layout - Unified container system */
+/* Main Layout - Responsive container system */
 .app-layout {
   flex: 1;
   display: flex;
   justify-content: center;
-  padding: var(--spacing-2xl);
-  min-width: 900px; /* Minimum width to maintain layout */
+  padding: var(--spacing-lg);
   width: 100%;
   position: relative;
   z-index: 1;
-  overflow-x: auto; /* Allow horizontal scroll if needed */
+  min-height: 0; /* Allow flex shrinking */
 }
 
-/* Unified Container - Seamlessly integrates avatar and chat */
+/* Unified Container - Responsive and mobile-first */
 .unified-container {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr; /* Avatar larger, chat narrower */
-  gap: 0; /* No gap for seamless integration */
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 1000px;
-  min-height: 75vh;
+  min-height: 85vh;
   background: var(--bg-glass);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   border: var(--glass-border);
   backdrop-filter: var(--glass-blur-strong);
   overflow: hidden;
@@ -256,12 +276,12 @@ body {
 .avatar-section::after {
   content: '';
   position: absolute;
-  top: 20%;
-  right: 0;
-  width: 1px;
-  height: 60%;
+  bottom: 0;
+  left: 20%;
+  width: 60%;
+  height: 1px;
   background: linear-gradient(
-    to bottom,
+    to right,
     transparent 0%,
     rgba(255, 255, 255, 0.1) 20%,
     rgba(255, 255, 255, 0.2) 50%,
@@ -271,20 +291,20 @@ body {
   z-index: 2;
 }
 
-/* Avatar Section - Left side of unified container */
+/* Avatar Section - Mobile-first responsive */
 .avatar-section {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 75vh;
-  padding: var(--spacing-2xl);
+  min-height: 40vh;
+  padding: var(--spacing-lg);
   background: linear-gradient(
     135deg,
     var(--bg-glass) 0%,
     var(--bg-secondary) 100%
   );
-  border-right: var(--glass-border);
+  border-bottom: var(--glass-border);
   position: relative;
   overflow: hidden;
 }
@@ -304,9 +324,9 @@ body {
 
 .avatar-video-container {
   width: 100%;
-  max-width: 500px;
+  max-width: 280px;
   aspect-ratio: 9/16;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--bg-secondary);
   position: relative;
@@ -317,25 +337,13 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 20%;
+  object-position: center 15%;
   border-radius: inherit;
   transition: var(--transition);
   transform: scale(1.1);
 }
 
-@media (max-width: 1200px) {
-  .avatar-video {
-    object-position: center 15%;
-    transform: scale(1.15);
-  }
-}
 
-@media (max-width: 768px) {
-  .avatar-video {
-    object-position: center 10%;
-    transform: scale(1.2);
-  }
-}
 
 .avatar-placeholder {
   position: absolute;
@@ -407,11 +415,12 @@ body {
   box-shadow: 0 0 8px var(--warning);
 }
 
-/* Chat Section - Right side of unified container */
+/* Chat Section - Mobile-first responsive */
 .chat-section {
   display: flex;
   flex-direction: column;
-  height: 100%; /* Take full height of unified container */
+  flex: 1;
+  min-height: 45vh;
   background: linear-gradient(
     135deg,
     var(--bg-secondary) 0%,
@@ -541,10 +550,10 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--spacing-lg) var(--spacing-md); /* Adjust horizontal padding for narrower chat */
+  padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
   scroll-behavior: smooth;
   min-height: 0; /* Allow flex shrinking */
 }
@@ -574,7 +583,7 @@ body {
 .message {
   display: flex;
   flex-direction: column;
-  max-width: 90%; /* Slightly wider for narrower chat */
+  max-width: 85%;
   animation: messageSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -653,8 +662,9 @@ body {
   flex-direction: column;
   gap: var(--spacing-md);
   align-items: center;
-  max-width: 85%; /* Narrower for better proportions */
-  margin: 0 auto; /* Center the input */
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
 }
 
 @media (max-width: 768px) {
@@ -1087,85 +1097,139 @@ button, .input-group, .message-content, .notification {
   box-shadow: var(--shadow-lg);
 }
 
-/* Responsive Design - Unified container with scaling */
-@media (max-width: 1200px) {
+/* Responsive Design - Mobile-first approach */
+/* Tablet and larger screens */
+@media (min-width: 768px) {
   .app-layout {
     padding: var(--spacing-xl);
-    min-width: 800px; /* Slightly smaller minimum */
   }
   
   .unified-container {
-    min-height: 60vh;
-    max-width: 900px;
-    grid-template-columns: 1.2fr 0.8fr; /* Keep avatar larger, chat narrower */
-  }
-  
-  .avatar-section {
-    min-height: 60vh;
-    padding: var(--spacing-xl);
-  }
-  
-  .chat-section {
-    height: 100%; /* Match unified container height */
-  }
-  
-  .avatar-video-container {
-    max-width: 350px;
-    aspect-ratio: 9/16;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-layout {
-    padding: var(--spacing-lg);
-    min-width: 700px; /* Maintain unified layout */
-  }
-  
-  .unified-container {
-    grid-template-columns: 1.2fr 0.8fr; /* Keep avatar larger, chat narrower on tablet */
-    min-height: 55vh;
-    max-width: 800px;
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Equal columns on tablet */
+    min-height: 70vh;
     border-radius: var(--radius-xl);
   }
   
   .avatar-section {
-    min-height: 55vh;
-    padding: var(--spacing-lg);
+    min-height: 70vh;
+    padding: var(--spacing-xl);
+    border-right: var(--glass-border);
+    border-bottom: none;
   }
   
-  .chat-section {
-    height: 100%; /* Match unified container height */
+  .avatar-section::after {
+    top: 20%;
+    right: 0;
+    bottom: auto;
+    left: auto;
+    width: 1px;
+    height: 60%;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 20%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0.1) 80%,
+      transparent 100%
+    );
   }
   
   .avatar-video-container {
-    max-width: 280px;
-    aspect-ratio: 9/16;
-    border-radius: var(--radius-lg);
+    max-width: 320px;
   }
   
-  .message {
-    max-width: 95%; /* Full width for mobile narrower chat */
-    font-size: 0.9rem;
+  .chat-section {
+    min-height: 70vh;
   }
   
   .messages-container {
-    padding: var(--spacing-md);
-    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+    gap: var(--spacing-lg);
   }
   
   .input-area {
-    padding: var(--spacing-md);
+    padding: var(--spacing-lg);
   }
   
   .chat-input-container {
-    gap: var(--spacing-sm);
-    max-width: 88%; /* Slightly narrower on tablet */
+    max-width: 90%;
+    padding: 0;
+  }
+}
+
+/* Desktop and larger screens */
+@media (min-width: 1024px) {
+  .app-layout {
+    padding: var(--spacing-2xl);
   }
   
+  .unified-container {
+    grid-template-columns: 1.2fr 0.8fr; /* Avatar larger on desktop */
+    min-height: 75vh;
+    max-width: 1000px;
+    border-radius: var(--radius-2xl);
+  }
+  
+  .avatar-section {
+    min-height: 75vh;
+    padding: var(--spacing-2xl);
+  }
+  
+  .avatar-video-container {
+    max-width: 400px;
+  }
+  
+  .chat-section {
+    min-height: 75vh;
+  }
+  
+  .chat-input-container {
+    max-width: 85%;
+  }
+}
+
+/* Large desktop screens */
+@media (min-width: 1200px) {
+  .unified-container {
+    max-width: 1200px;
+  }
+  
+  .avatar-video-container {
+    max-width: 500px;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 767px) {
   .voice-button, .send-button, .clear-button {
-    min-width: 40px;
-    min-height: 40px;
-    font-size: 1.1rem;
+    min-width: 44px; /* Better touch targets */
+    min-height: 44px;
+    font-size: 1rem;
+  }
+  
+  .message {
+    max-width: 95%;
+  }
+  
+  .message-content {
+    padding: var(--spacing-md);
+    font-size: 0.9rem;
+  }
+  
+  .empty-state h3 {
+    font-size: 1.3rem;
+  }
+  
+  .empty-state p {
+    font-size: 1rem;
+  }
+  
+  .status-indicator {
+    bottom: var(--spacing-md);
+    left: var(--spacing-md);
+    padding: var(--spacing-sm);
+    font-size: 0.8rem;
   }
   
   .notifications {
@@ -1179,96 +1243,26 @@ button, .input-group, .message-content, .notification {
     padding: var(--spacing-md);
     font-size: 0.9rem;
   }
-}
-
-@media (max-width: 480px) {
-  .app-layout {
+  
+  .chat-input {
+    font-size: 16px; /* Prevent zoom on iOS */
     padding: var(--spacing-md);
-    min-width: 600px; /* Maintain unified layout even on phones */
-  }
-  
-  .unified-container {
-    grid-template-columns: 1.2fr 0.8fr; /* Keep avatar larger, chat narrower on mobile */
-    min-height: 50vh;
-    max-width: 700px;
-    border-radius: var(--radius-lg);
-  }
-  
-  .avatar-section {
-    min-height: 50vh;
-    padding: var(--spacing-md);
-  }
-  
-  .chat-section {
-    height: 100%; /* Match unified container height */
-  }
-  
-  .avatar-video-container {
-    max-width: 240px;
-    aspect-ratio: 9/16;
-  }
-  
-  .messages-container {
-    padding: var(--spacing-sm);
-    gap: var(--spacing-sm);
-  }
-  
-  .input-area {
-    padding: var(--spacing-sm);
   }
   
   .chat-input-container {
     gap: var(--spacing-sm);
-    max-width: 85%; /* Even narrower for mobile */
-  }
-  
-  .message-content {
-    padding: var(--spacing-sm);
-    font-size: 0.85rem;
-  }
-  
-  .voice-button, .send-button, .clear-button {
-    min-width: 36px;
-    min-height: 36px;
-    font-size: 1rem;
-  }
-  
-  .status-indicator {
-    bottom: var(--spacing-sm);
-    left: var(--spacing-sm);
-    padding: var(--spacing-sm);
-    font-size: 0.8rem;
-  }
-  
-  .notifications {
-    top: var(--spacing-sm);
-    right: var(--spacing-sm);
-    left: var(--spacing-sm);
   }
 }
 
-/* Avatar video optimization for portrait orientation */
+/* Avatar video optimization */
 .avatar-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 20%;
+  object-position: center 15%;
   border-radius: inherit;
+  transition: var(--transition);
   transform: scale(1.1);
-}
-
-@media (max-width: 1200px) {
-  .avatar-video {
-    object-position: center 15%;
-    transform: scale(1.15);
-  }
-}
-
-@media (max-width: 768px) {
-  .avatar-video {
-    object-position: center 10%;
-    transform: scale(1.2);
-  }
 }
 
 /* Ensure input is perfectly centered */

@@ -483,6 +483,42 @@ const App: React.FC = () => {
     manageListening();
   }, [isAvatarSpeaking, appState.isListening, appState.isConnected, appState.isProcessing, isMicrophoneMuted, startListening]);
 
+  // Handle early user interaction to enable video autoplay
+  useEffect(() => {
+    let hasInteracted = false;
+    
+    const enableAutoplay = () => {
+      if (hasInteracted) return;
+      hasInteracted = true;
+      
+      // Find and enable the avatar video
+      const avatarVideo = document.getElementById('avatarVideo') as HTMLVideoElement;
+      if (avatarVideo) {
+        avatarVideo.muted = false;
+        avatarVideo.volume = 1.0;
+        avatarVideo.play().catch(() => {
+          // Autoplay still blocked, will show click-to-start overlay
+        });
+      }
+      
+      // Remove listeners after first interaction
+      document.removeEventListener('click', enableAutoplay);
+      document.removeEventListener('touchstart', enableAutoplay);
+      document.removeEventListener('keydown', enableAutoplay);
+    };
+
+    // Add listeners for user interaction
+    document.addEventListener('click', enableAutoplay);
+    document.addEventListener('touchstart', enableAutoplay);
+    document.addEventListener('keydown', enableAutoplay);
+
+    return () => {
+      document.removeEventListener('click', enableAutoplay);
+      document.removeEventListener('touchstart', enableAutoplay);
+      document.removeEventListener('keydown', enableAutoplay);
+    };
+  }, []);
+
   return (
     <div className="app">
       {/* Notifications */}

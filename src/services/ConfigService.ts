@@ -40,7 +40,7 @@ class ConfigService {
         this.dynamicConfig = JSON.parse(saved);
       }
     } catch (error) {
-      console.error('Failed to load settings from localStorage:', error);
+      // Failed to load settings from localStorage
     }
   }
 
@@ -49,7 +49,7 @@ class ConfigService {
     try {
       localStorage.setItem('app-settings', JSON.stringify(this.dynamicConfig));
     } catch (error) {
-      console.error('Failed to save settings to localStorage:', error);
+      // Failed to save settings to localStorage
     }
   }
 

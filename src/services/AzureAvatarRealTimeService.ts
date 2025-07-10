@@ -297,27 +297,33 @@ export class AzureAvatarRealTimeService {
     this.peerConnection.ontrack = (event) => {
       // Reduce logging during video playback to prevent lag
       if (event.track.kind === 'video') {
-        console.log('🎬 Video track received - setting up stream...');
+        // Video track received - setting up stream
       } else if (event.track.kind === 'audio') {
-        console.log('🔊 Audio track received - configuring audio...');
+        // Audio track received - configuring audio
       }
       
       const videoElement = document.getElementById(videoElementId) as HTMLVideoElement;
       
       if (videoElement) {
         if (event.track.kind === 'video') {
-          console.log('� Attaching video stream to video element...');
+          // Attaching video stream to video element
           videoElement.srcObject = event.streams[0];
           videoElement.autoplay = true;
           videoElement.playsInline = true;
           videoElement.muted = false;
           videoElement.volume = 1.0;
           
-          console.log('✅ Video stream attached to video element');
+          // Trigger autoplay
+          setTimeout(() => {
+            videoElement.play().catch(() => {
+              // Autoplay blocked - user interaction required
+            });
+          }, 100);
+          
           this.emitEvent('videoStreamReady', { videoElementId });
           
         } else if (event.track.kind === 'audio') {
-          console.log('� Handling audio track...');
+          // Handling audio track
           
           // Get the current video element's stream
           const currentStream = videoElement.srcObject as MediaStream;
@@ -329,7 +335,6 @@ export class AzureAvatarRealTimeService {
             
           } else {
             // No video stream yet, create new stream with just audio
-            console.log('� Creating new stream with audio track...');
             const audioStream = new MediaStream([event.track]);
             videoElement.srcObject = audioStream;
           }
@@ -339,12 +344,12 @@ export class AzureAvatarRealTimeService {
           videoElement.volume = 1.0;
           event.track.enabled = true;
           
-          console.log('🔊 Audio track added to video element:', {
-            muted: videoElement.muted,
-            volume: videoElement.volume,
-            trackEnabled: event.track.enabled,
-            trackMuted: event.track.muted
-          });
+          // Trigger autoplay for audio
+          setTimeout(() => {
+            videoElement.play().catch(() => {
+              // Autoplay blocked - user interaction required
+            });
+          }, 100);
         }
         
         // Set up optimized video event listeners (minimal logging for performance)

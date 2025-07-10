@@ -30,7 +30,6 @@ export class SpeechService {
     this.currentLanguage = config.recognitionLanguage || 'en-US';
     
     // Azure Speech SDK configuration for English-only
-    console.log('�🇸 Azure Speech SDK: English-only mode enabled');
     
     // Performance optimizations for Azure Speech SDK
     this.speechConfig.setProperty(
@@ -83,7 +82,6 @@ export class SpeechService {
     this.audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
     
     // Additional optimizations for always-on mode
-    console.log('🎤 Microphone configured for English-only instant voice capture');
     
     // Pre-warm the microphone connection to reduce startup delay
     this.preWarmMicrophone();
@@ -94,7 +92,6 @@ export class SpeechService {
    */
   private async preWarmMicrophone(): Promise<void> {
     try {
-      console.log('🔥 Pre-warming microphone connection...');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: { 
           echoCancellation: true,
@@ -107,10 +104,9 @@ export class SpeechService {
       // Keep connection alive briefly then close
       setTimeout(() => {
         stream.getTracks().forEach(track => track.stop());
-        console.log('✅ Microphone pre-warming completed');
       }, 200);
     } catch (error) {
-      console.warn('Microphone pre-warming failed (non-critical):', error);
+      // Pre-warming failed (non-critical)
     }
   }
 
@@ -119,8 +115,6 @@ export class SpeechService {
    */
   public async preInitializeRecognizer(): Promise<void> {
     try {
-      console.log('🚀 Pre-initializing speech recognizer...');
-      
       // Create a temporary recognizer to warm up the connection
       const tempConfig = SpeechSDK.SpeechConfig.fromSubscription(
         this.speechConfig.authorizationToken || this.speechConfig.subscriptionKey,
@@ -133,10 +127,9 @@ export class SpeechService {
       // Clean up immediately
       setTimeout(() => {
         tempRecognizer.close();
-        console.log('✅ Speech recognizer pre-initialization completed');
       }, 100);
     } catch (error) {
-      console.warn('Speech recognizer pre-initialization failed (non-critical):', error);
+      // Speech recognizer pre-initialization failed (non-critical)
     }
   }
 
@@ -158,18 +151,11 @@ export class SpeechService {
     return new Promise((resolve, reject) => {
       try {
         // Use English-only mode
-        console.log('🇺🇸 Setting up ENGLISH-ONLY speech recognizer');
         this.speechConfig.speechRecognitionLanguage = 'en-US';
         this.speechRecognizer = new SpeechSDK.SpeechRecognizer(this.speechConfig, this.audioConfig!);
-        console.log('✅ English-only speech recognizer ready');
 
-        // Event handlers - optimized for real-time text display with debugging
+        // Event handlers - optimized for real-time text display
         this.speechRecognizer.recognizing = (_sender, e) => {
-          console.log('🎤 Recognizing event:', {
-            reason: e.result.reason,
-            text: e.result.text,
-            length: e.result.text.length
-          });
           
           // Real-time display: show text immediately, even single characters
           if (e.result.reason === SpeechSDK.ResultReason.RecognizingSpeech && e.result.text.length > 0) {
@@ -181,22 +167,12 @@ export class SpeechService {
               const detectedLanguage = this.getDetectedLanguage(e.result);
               if (detectedLanguage && detectedLanguage !== this.detectedLanguage) {
                 this.detectedLanguage = detectedLanguage;
-                console.log('🌐 Language detected:', detectedLanguage);
               }
             }
           }
         };
 
         this.speechRecognizer.recognized = (_sender, e) => {
-          console.log('✅ Recognized event:', {
-            reason: e.result.reason,
-            reasonString: this.getReasonString(e.result.reason),
-            text: e.result.text,
-            hasText: !!e.result.text.trim(),
-            duration: e.result.duration,
-            offset: e.result.offset
-          });
-          
           // Handle recognition results using Azure Speech SDK best practices
           switch (e.result.reason) {
             case SpeechSDK.ResultReason.RecognizedSpeech:
@@ -210,52 +186,37 @@ export class SpeechService {
                   this.updateSynthesisVoiceForLanguage(detectedLanguage);
                 }
                 onRecognized(e.result.text, detectedLanguage || this.currentLanguage);
-              } else {
-                console.log('⚠️ Empty speech recognized - microphone detects sound but no clear speech');
               }
               break;
               
             case SpeechSDK.ResultReason.NoMatch:
-              console.log('⚠️ No speech match detected - check microphone and speak clearly');
+              // No speech match detected
               break;
               
             default:
-              console.log('ℹ️ Recognition result:', this.getReasonString(e.result.reason));
+              // Other recognition results
               break;
           }
         };
 
         this.speechRecognizer.canceled = (_sender, e) => {
-          console.error('❌ Speech recognition cancelled:', {
-            reason: e.reason,
-            errorDetails: e.errorDetails,
-            errorCode: e.errorCode
-          });
-          
           // Handle cancellation using Azure Speech SDK best practices
           if (e.reason === SpeechSDK.CancellationReason.Error) {
-            console.log(`CANCELED: ErrorCode=${e.errorCode}`);
-            console.log(`CANCELED: ErrorDetails=${e.errorDetails}`);
-            console.log("CANCELED: Did you set the speech resource key and region values?");
             onError(`Speech recognition error: ${e.errorDetails}`);
-          } else {
-            console.log(`CANCELED: Reason=${e.reason}`);
           }
         };
 
         this.speechRecognizer.sessionStarted = (_sender, e) => {
-          console.log('🎤 Speech recognition session started:', e.sessionId);
+          // Session started
         };
 
         this.speechRecognizer.sessionStopped = (_sender, e) => {
-          console.log('🛑 Speech recognition session stopped:', e.sessionId);
+          // Session stopped
         };
 
         // Start continuous recognition with always-on microphone
         this.speechRecognizer.startContinuousRecognitionAsync(
           () => {
-            console.log('✅ Azure Speech SDK English-only continuous recognition started - optimized for real-time speech detection');
-            
             // Keep microphone connection alive immediately
             this.keepMicrophoneAlive();
             
@@ -267,7 +228,6 @@ export class SpeechService {
             resolve();
           },
           (error) => {
-            console.error('❌ Failed to start always-on speech recognition:', error);
             onError(`Failed to start speech recognition: ${error}`);
             reject(error);
           }
