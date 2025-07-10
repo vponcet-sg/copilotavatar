@@ -2,16 +2,13 @@ import * as SpeechSDK from 'microsoft-cognitiveservices-speech-sdk';
 import ConfigService from './ConfigService';
 
 /**
- * Azure Speech Service implementation following Microsoft's best practices
+ * Azure Speech Service implementation for English-only speech recognition
  * Features:
- * - Continuous multilingual speech recognition with real-time language detection
- * - AutoDetectSourceLanguageConfig for up to 10 simultaneous languages
- * - Continuous Language Identification (LID) for dynamic language switching
+ * - English speech recognition and synthesis
  * - Azure Speech SDK best practices for error handling and performance
  * 
  * References:
  * - https://docs.microsoft.com/en-us/azure/ai-services/speech-service/how-to-recognize-speech
- * - https://docs.microsoft.com/en-us/azure/ai-services/speech-service/how-to-automatic-language-detection
  */
 
 export class SpeechService {
@@ -25,24 +22,17 @@ export class SpeechService {
 
   constructor() {
     const config = ConfigService.getInstance().getSpeechConfig();
-    const multiLingualConfig = ConfigService.getInstance().getMultiLingualConfig();
     
     // Initialize Speech SDK configuration
     this.speechConfig = SpeechSDK.SpeechConfig.fromSubscription(config.speechKey, config.speechRegion);
     
-    // ALWAYS enable auto-detection for the best user experience
-    this.currentLanguage = config.recognitionLanguage || multiLingualConfig.primaryLanguage;
+    // Set to English-only
+    this.currentLanguage = config.recognitionLanguage || 'en-US';
     
-    // Azure Speech SDK configuration following Microsoft best practices
-    console.log('🌐 Azure Speech SDK: Multilingual auto-detection enabled with continuous LID');
+    // Azure Speech SDK configuration for English-only
+    console.log('�🇸 Azure Speech SDK: English-only mode enabled');
     
-    // Force auto-detection to be enabled with comprehensive language list
-    this.speechConfig.setProperty(
-      SpeechSDK.PropertyId.SpeechServiceConnection_LanguageIdMode, 
-      'Continuous' // Enable continuous language identification for real-time language switching
-    );
-    
-    // Performance optimizations for Azure Speech SDK - More sensitive settings
+    // Performance optimizations for Azure Speech SDK
     this.speechConfig.setProperty(
       SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs,
       '3000' // Longer initial silence to capture speech better
@@ -56,13 +46,13 @@ export class SpeechService {
       '1000' // Longer segmentation for better speech detection
     );
     
-    // Always-on microphone configuration with enhanced sensitivity
+    // Microphone configuration
     this.speechConfig.setProperty(
       SpeechSDK.PropertyId.SpeechServiceConnection_RecoMode,
       'CONVERSATION' // Conversation mode for continuous listening
     );
     
-    // Enable continuous recognition for always-on microphone
+    // Enable continuous recognition
     this.speechConfig.setProperty(
       SpeechSDK.PropertyId.SpeechServiceConnection_EnableAudioLogging,
       'false' // Disable audio logging to reduce overhead
@@ -77,9 +67,9 @@ export class SpeechService {
     // Set output format to simple for better compatibility
     this.speechConfig.outputFormat = SpeechSDK.OutputFormat.Simple;
     
-    // Set synthesis defaults (will be updated based on detected language)
+    // Set synthesis defaults for English
     this.speechConfig.speechSynthesisLanguage = config.synthesisLanguage || 'en-US';
-    this.speechConfig.speechSynthesisVoiceName = config.synthesisVoice || 'en-US-JennyMultilingualNeural';
+    this.speechConfig.speechSynthesisVoiceName = config.synthesisVoice || 'en-US-JennyNeural';
     
     // Configure optimized microphone settings
     this.configureOptimizedMicrophone();
@@ -93,12 +83,11 @@ export class SpeechService {
     this.audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
     
     // Additional optimizations for always-on mode
-    console.log('🎤 Always-on microphone configured for instant voice capture and real-time display');
+    console.log('🎤 Microphone configured for English-only instant voice capture');
   }
 
   /**
-   * Start continuous speech recognition with automatic multi-lingual support
-   * Language detection is always enabled for optimal user experience
+   * Start continuous speech recognition with English-only support
    */
   public startRecognition(
     onRecognizing: (text: string, language?: string) => void,
@@ -107,42 +96,11 @@ export class SpeechService {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        // Check if multilingual mode is enabled
-        const multiLingualConfig = ConfigService.getInstance().getMultiLingualConfig();
-        const isMultiLingual = multiLingualConfig.autoDetect;
-        
-        if (isMultiLingual) {
-          // Use multilingual auto-detection
-          console.log('🌐 Setting up MULTILINGUAL auto-detect speech recognizer');
-          
-          try {
-            const supportedLanguages = multiLingualConfig.supportedLanguages;
-            console.log('🗣️ Auto-detection languages:', supportedLanguages);
-            
-            // Configure auto-detection with supported languages using Azure Speech SDK best practices
-            const autoDetectSourceLanguageConfig = SpeechSDK.AutoDetectSourceLanguageConfig.fromLanguages(supportedLanguages);
-            
-            // Create speech recognizer with auto-detection configuration for continuous language identification
-            this.speechRecognizer = SpeechSDK.SpeechRecognizer.FromConfig(
-              this.speechConfig, 
-              autoDetectSourceLanguageConfig, 
-              this.audioConfig!
-            );
-            
-            console.log('✅ Multilingual speech recognizer ready with', supportedLanguages.length, 'languages');
-          } catch (error) {
-            console.warn('⚠️ Multilingual setup failed, falling back to English-only:', error);
-            // Fallback to English-only
-            this.speechConfig.speechRecognitionLanguage = 'en-US';
-            this.speechRecognizer = new SpeechSDK.SpeechRecognizer(this.speechConfig, this.audioConfig!);
-          }
-        } else {
-          // Use English-only mode
-          console.log('🇺🇸 Setting up ENGLISH-ONLY speech recognizer');
-          this.speechConfig.speechRecognitionLanguage = 'en-US';
-          this.speechRecognizer = new SpeechSDK.SpeechRecognizer(this.speechConfig, this.audioConfig!);
-          console.log('✅ English-only speech recognizer ready');
-        }
+        // Use English-only mode
+        console.log('🇺🇸 Setting up ENGLISH-ONLY speech recognizer');
+        this.speechConfig.speechRecognitionLanguage = 'en-US';
+        this.speechRecognizer = new SpeechSDK.SpeechRecognizer(this.speechConfig, this.audioConfig!);
+        console.log('✅ English-only speech recognizer ready');
 
         // Event handlers - optimized for real-time text display with debugging
         this.speechRecognizer.recognizing = (_sender, e) => {
@@ -235,7 +193,7 @@ export class SpeechService {
         // Start continuous recognition with always-on microphone
         this.speechRecognizer.startContinuousRecognitionAsync(
           () => {
-            console.log('✅ Azure Speech SDK multilingual continuous recognition started - optimized for real-time language detection');
+            console.log('✅ Azure Speech SDK English-only continuous recognition started - optimized for real-time speech detection');
             
             // Keep microphone connection alive immediately
             this.keepMicrophoneAlive();
@@ -443,23 +401,20 @@ export class SpeechService {
   }
 
   /**
-   * Get currently detected language
+   * Get current language (English-only)
    */
   public getDetectedLanguageInfo(): { current: string; detected: string | null } {
     return {
-      current: this.currentLanguage,
-      detected: this.detectedLanguage
+      current: 'en-US',
+      detected: 'en-US'
     };
   }
 
   /**
-   * Auto language detection is always enabled for optimal user experience
-   * This method is deprecated - detection cannot be disabled
+   * Auto language detection is disabled in English-only mode
    */
   public setAutoDetectionEnabled(enabled: boolean): void {
-    console.log('🌐 Auto-detection is permanently enabled for the best user experience');
-    console.log('📝 Attempted to set auto-detection to:', enabled, '- always remains enabled');
-    // Auto-detection is always enabled, so we don't change anything
+    console.log('�🇸 Auto-detection disabled in English-only mode');
   }
 
   /**
@@ -480,141 +435,6 @@ export class SpeechService {
         .catch(error => {
           console.warn('Microphone keep-alive check failed (non-critical):', error);
         });
-    }
-  }
-
-  /**
-   * Debug method to test microphone and speech recognition setup
-   */
-  public async debugMicrophoneSetup(): Promise<{ success: boolean; details: string[] }> {
-    const details: string[] = [];
-    
-    try {
-      // Test 1: Check microphone permission
-      details.push('Testing microphone permission...');
-      const hasPermission = await this.checkMicrophonePermission();
-      details.push(`Microphone permission: ${hasPermission ? 'GRANTED' : 'DENIED'}`);
-      
-      if (!hasPermission) {
-        return { success: false, details };
-      }
-      
-      // Test 2: Check speech config
-      details.push('Checking speech configuration...');
-      const config = ConfigService.getInstance().getSpeechConfig();
-      details.push(`Speech key exists: ${!!config.speechKey}`);
-      details.push(`Speech region: ${config.speechRegion}`);
-      
-      if (!config.speechKey || !config.speechRegion) {
-        details.push('ERROR: Missing speech configuration');
-        return { success: false, details };
-      }
-      
-      // Test 3: Test audio configuration
-      details.push('Testing audio configuration...');
-      if (this.audioConfig) {
-        details.push('Audio config: READY');
-      } else {
-        details.push('Audio config: NOT INITIALIZED');
-        this.configureOptimizedMicrophone();
-        details.push('Audio config: INITIALIZED');
-      }
-      
-      // Test 4: Check if we can create a recognizer
-      details.push('Testing speech recognizer creation...');
-      try {
-        const testRecognizer = new SpeechSDK.SpeechRecognizer(this.speechConfig, this.audioConfig!);
-        details.push('Speech recognizer: CREATED SUCCESSFULLY');
-        testRecognizer.close();
-      } catch (error) {
-        details.push(`Speech recognizer error: ${error}`);
-        return { success: false, details };
-      }
-      
-      details.push('All tests passed - Azure Speech SDK multilingual setup should work');
-      
-      // Optional: Test audio levels (this will take 5 seconds)
-      details.push('Starting 5-second audio level test - speak now...');
-      setTimeout(() => {
-        this.testMicrophoneAudioLevels();
-      }, 1000);
-      
-      return { success: true, details };
-      
-    } catch (error) {
-      details.push(`Debug error: ${error}`);
-      return { success: false, details };
-    }
-  }
-
-  /**
-   * Test microphone audio levels to see if it's actually picking up sound
-   */
-  public async testMicrophoneAudioLevels(): Promise<void> {
-    try {
-      console.log('🎤 Testing microphone audio levels...');
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        }
-      });
-      
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      
-      analyser.fftSize = 256;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      
-      source.connect(analyser);
-      
-      let testDuration = 5000; // 5 seconds
-      let maxVolume = 0;
-      let sampleCount = 0;
-      
-      const checkAudioLevel = () => {
-        analyser.getByteFrequencyData(dataArray);
-        
-        // Calculate average volume
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
-        const average = sum / bufferLength;
-        maxVolume = Math.max(maxVolume, average);
-        sampleCount++;
-        
-        if (average > 10) { // Some activity detected
-          console.log(`🎤 Audio detected: ${average.toFixed(1)} (max: ${maxVolume.toFixed(1)})`);
-        }
-        
-        if (testDuration > 0) {
-          testDuration -= 100;
-          setTimeout(checkAudioLevel, 100);
-        } else {
-          // Cleanup
-          stream.getTracks().forEach(track => track.stop());
-          audioContext.close();
-          
-          console.log(`🎤 Audio test complete - Max volume: ${maxVolume.toFixed(1)}, Samples: ${sampleCount}`);
-          
-          if (maxVolume < 5) {
-            console.warn('⚠️ Very low audio levels detected. Check microphone volume/sensitivity.');
-          } else {
-            console.log('✅ Microphone is picking up audio properly');
-          }
-        }
-      };
-      
-      console.log('🎤 Speak now for 5 seconds to test audio levels...');
-      checkAudioLevel();
-      
-    } catch (error) {
-      console.error('❌ Failed to test microphone audio levels:', error);
     }
   }
 

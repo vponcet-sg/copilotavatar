@@ -4,10 +4,11 @@ import { SpeechService } from './services/SpeechService';
 import { BotService } from './services/BotService';
 import { AzureAvatarRealTimeService } from './services/AzureAvatarRealTimeService';
 import ConfigService from './services/ConfigService';
-import { ErrorBanner, StatusButton } from './components/UIComponents';
-import { AzureAvatarPlayer } from './components/AzureAvatarPlayer';
+import { ErrorBanner } from './components/UIComponents';
+import { AzureAvatarPlayer } from './components/AzureAvatarPlayer.modern';
 import { ConversationHistory } from './components/ConversationHistory';
-import './App.css';
+import { ChatInput } from './components/ChatInput';
+import './App.modern.css';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>({
@@ -25,7 +26,6 @@ const App: React.FC = () => {
   const [isAvatarSessionActive, setIsAvatarSessionActive] = useState(false);
   const [avatarConnectionState, setAvatarConnectionState] = useState<string>('disconnected');
   const [avatarLastEvent, setAvatarLastEvent] = useState<string>('');
-  const [isMultiLingual, setIsMultiLingual] = useState(false); // Default to English-only
   const [isMicrophoneMuted, setIsMicrophoneMuted] = useState(false); // Microphone mute state - listening is on by default
   
   // Service instances (using refs to persist across renders)
@@ -119,15 +119,11 @@ const App: React.FC = () => {
       // Update conversation history
       setConversationHistory(prev => [...prev, botMessage]);
 
-      // Immediately speak the bot response using Azure Avatar Real-Time Service with auto voice selection
+      // Immediately speak the bot response using Azure Avatar Real-Time Service
       try {
         if (azureAvatarServiceRef.current && botMessage.text.trim()) {
-          // Get the detected language from speech service if available
-          const detectedLanguageInfo = speechServiceRef.current?.getDetectedLanguageInfo();
-          const targetLanguage = detectedLanguageInfo?.detected || detectedLanguageInfo?.current;
-          
-          // Use the auto voice selection method (optimized)
-          await azureAvatarServiceRef.current.speakWithAutoVoice(botMessage.text, targetLanguage);
+          // Use English-only voice
+          await azureAvatarServiceRef.current.speakWithAutoVoice(botMessage.text, 'en-US');
         }
       } catch (error) {
         setAppState(prev => ({
@@ -395,130 +391,34 @@ const App: React.FC = () => {
     }));
   }, []);
 
-  // Test avatar speech
-  const testAvatarSpeech = useCallback(async () => {
-    if (!azureAvatarServiceRef.current || !isAvatarSessionActive) {
-      addNotification('Avatar session not active', 'warning');
-      return;
-    }
-
+  // Send message function for typing
+  const sendMessage = useCallback(async (message: string) => {
+    if (!botServiceRef.current || !message.trim()) return;
+    
+    setAppState(prev => ({ ...prev, isProcessing: true, currentMessage: message }));
+    
+    // Add user message to history
+    const userMessage: BotMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      text: message,
+      from: { id: 'user', name: 'You' },
+      timestamp: new Date()
+    };
+    setConversationHistory(prev => [...prev, userMessage]);
+    
     try {
-      const testMessage = "Hello! This is a test of the Azure Avatar speech synthesis. I can speak any text you send to me.";
-      const avatarConfig = ConfigService.getInstance().getAvatarConfig();
-      
-      console.log('🎭 Testing avatar speech:', testMessage);
-      addNotification('Testing avatar speech...', 'info');
-      
-      await azureAvatarServiceRef.current.speak(testMessage, avatarConfig.voice);
-      addNotification('Avatar speech test completed', 'success');
+      await botServiceRef.current.sendMessage(message);
     } catch (error) {
-      console.error('Avatar speech test failed:', error);
-      addNotification(`Avatar speech test failed: ${error instanceof Error ? error.message : String(error)}`, 'warning');
+      console.error('Failed to send message:', error);
+      setAppState(prev => ({ 
+        ...prev, 
+        error: `Failed to send message: ${error instanceof Error ? error.message : String(error)}`,
+        isProcessing: false
+      }));
     }
-  }, [isAvatarSessionActive, addNotification]);
+  }, []);
 
-  // Debug microphone setup
-  const debugMicrophone = useCallback(async () => {
-    if (!speechServiceRef.current) {
-      addNotification('Speech service not initialized', 'warning');
-      return;
-    }
-
-    try {
-      console.log('🔍 Starting comprehensive microphone diagnostics...');
-      
-      // Check browser environment
-      console.log('🌐 Browser Environment:');
-      console.log('- Protocol:', window.location.protocol);
-      console.log('- Host:', window.location.host);
-      console.log('- User Agent:', navigator.userAgent);
-      console.log('- HTTPS Required:', window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost'));
-      
-      // Check microphone API availability
-      console.log('🎤 Microphone API Availability:');
-      console.log('- navigator.mediaDevices:', !!navigator.mediaDevices);
-      console.log('- getUserMedia:', !!navigator.mediaDevices?.getUserMedia);
-      
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        addNotification('❌ Microphone API not available in this browser', 'warning');
-        return;
-      }
-      
-      // Check current permissions
-      if (navigator.permissions) {
-        try {
-          const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          console.log('🔐 Current microphone permission:', micPermission.state);
-          addNotification(`Microphone permission: ${micPermission.state}`, 'info');
-        } catch (error) {
-          console.log('🔐 Could not query microphone permission:', error);
-        }
-      }
-
-      const debugResult = await speechServiceRef.current.debugMicrophoneSetup();
-      
-      console.log('🔍 Microphone Debug Results:', debugResult);
-      
-      if (debugResult.success) {
-        addNotification('Microphone setup: SUCCESS ✅', 'success');
-      } else {
-        addNotification('Microphone setup: FAILED ❌', 'warning');
-        
-        // Provide specific guidance based on protocol
-        if (window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost')) {
-          addNotification('💡 Try using HTTPS for microphone access', 'info');
-        }
-      }
-      
-      // Show detailed results in console
-      debugResult.details.forEach(detail => console.log('📋', detail));
-      
-    } catch (error) {
-      console.error('Debug test failed:', error);
-      addNotification('Debug test failed', 'warning');
-    }
-  }, [addNotification]);
-
-  // Toggle language mode between multilingual and English-only
-  const toggleLanguageMode = useCallback(async () => {
-    const newMode = !isMultiLingual;
-    setIsMultiLingual(newMode);
-    
-    // Update ConfigService with new language settings
-    const configService = ConfigService.getInstance();
-    configService.updateSettings({
-      multiLingualEnabled: newMode,
-      recognitionLanguage: newMode ? 'en-US' : 'en-US', // Keep en-US as base
-      autoDetectLanguages: newMode ? 
-        configService.getMultiLingualConfig().supportedLanguages : 
-        ['en-US'] // English-only mode
-    });
-    
-    addNotification(
-      newMode ? 'Switched to multilingual mode 🌐' : 'Switched to English-only mode 🇺🇸', 
-      'success'
-    );
-    
-    // If currently listening, restart recognition with new language settings
-    if (appState.isListening && speechServiceRef.current) {
-      try {
-        await speechServiceRef.current.stopRecognition();
-        // Reinitialize speech service with new settings
-        speechServiceRef.current = new SpeechService();
-        // Restart listening with new language configuration
-        setTimeout(() => {
-          if (!isMicrophoneMuted) {
-            startListening();
-          }
-        }, 500);
-      } catch (error) {
-        console.error('Failed to switch language mode:', error);
-        addNotification('Failed to switch language mode', 'warning');
-      }
-    }
-  }, [isMultiLingual, appState.isListening, isMicrophoneMuted, addNotification, startListening]);
-
-  // Handle language change
   // Automatically manage listening state based on avatar speaking
   useEffect(() => {
     const manageListening = async () => {
@@ -556,178 +456,79 @@ const App: React.FC = () => {
     manageListening();
   }, [isAvatarSpeaking, appState.isListening, appState.isConnected, appState.isProcessing, isMicrophoneMuted, startListening]);
 
-  // Performance monitoring (for debugging)
-  const performanceMetrics = useCallback(() => {
-    console.log('🚀 Performance Metrics:');
-    console.log('- Listening state:', appState.isListening);
-    console.log('- Processing state:', appState.isProcessing);
-    console.log('- Avatar speaking:', isAvatarSpeaking);
-    console.log('- Avatar session active:', isAvatarSessionActive);
-    console.log('- Conversation length:', conversationHistory.length);
-    addNotification('Performance metrics logged to console', 'info');
-  }, [appState.isListening, appState.isProcessing, isAvatarSpeaking, isAvatarSessionActive, conversationHistory.length, addNotification]);
-
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>🎤 Speech-to-Speech Avatar Assistant</h1>
-        <div className="header-controls">
-          <StatusButton 
-            isSessionActive={isAvatarSessionActive}
-            connectionState={avatarConnectionState}
-            isSpeaking={isAvatarSpeaking}
-            lastEvent={avatarLastEvent}
-          />
-        </div>
-      </header>
-
-      <main className="app-main">
-        {/* Notifications */}
-        {notifications.length > 0 && (
-          <div className="notifications">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`notification ${notification.type}`}
+      {/* Notifications */}
+      {notifications.length > 0 && (
+        <div className="notifications">
+          {notifications.map((notification) => (
+            <div key={notification.id} className={`notification ${notification.type}`}>
+              <span>{notification.message}</span>
+              <button 
+                onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}
+                className="notification-close"
               >
-                <span>{notification.message}</span>
-                <button 
-                  onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}
-                  className="notification-close"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
-        {/* Error Display */}
-        {appState.error && (
-          <ErrorBanner 
-            error={appState.error} 
-            onDismiss={() => setAppState(prev => ({ ...prev, error: undefined }))} 
-          />
-        )}
-
-        {/* Azure Avatar Section */}
-        <AzureAvatarPlayer 
-          isSessionActive={isAvatarSessionActive}
-          isSpeaking={isAvatarSpeaking}
-          onSessionStart={() => addNotification('Avatar session started', 'success')}
-          onSessionStop={() => addNotification('Avatar session stopped', 'info')}
-          onSpeakingStart={() => {
-            console.log('Avatar started speaking (from player)');
-            setIsAvatarSpeaking(true);
-          }}
-          onSpeakingStop={() => {
-            console.log('Avatar stopped speaking (from player)');
-            setIsAvatarSpeaking(false);
-          }}
-          onConnectionStateChange={(state) => setAvatarConnectionState(state)}
-          onLastEventChange={(event) => setAvatarLastEvent(event)}
+      {/* Error Display */}
+      {appState.error && (
+        <ErrorBanner 
+          error={appState.error} 
+          onDismiss={() => setAppState(prev => ({ ...prev, error: undefined }))} 
         />
+      )}
 
-        {/* Control Panel */}
-        <div className="control-panel">
-          <div className="speech-controls">
-            <div className="primary-controls">
-              {!appState.isListening ? (
-                <button
-                  className="control-button primary"
-                  onClick={startListening}
-                  disabled={!appState.isConnected || appState.isProcessing}
-                >
-                  🎤 Start Listening
-                </button>
-              ) : (
-                <button
-                  className="control-button danger listening-active"
-                  onClick={stopListening}
-                >
-                  🛑 Stop Listening
-                  <div className="listening-indicator">
-                    <div className="listening-pulse"></div>
-                  </div>
-                </button>
-              )}
-              
-              {/* Language Mode Toggle */}
-              <button
-                className={`control-button ${isMultiLingual ? 'multilingual' : 'english-only'}`}
-                onClick={toggleLanguageMode}
-                disabled={appState.isProcessing}
-                title={isMultiLingual ? 'Switch to English-only mode' : 'Switch to multilingual mode'}
-              >
-                {isMultiLingual ? '🌐 Multilingual' : '🇺🇸 English Only'}
-              </button>
-            </div>
-            
-            <div className="secondary-controls">
-              <button
-                className="control-button secondary"
-                onClick={clearConversation}
-                disabled={appState.isListening}
-              >
-                🗑️ Clear Chat
-              </button>
-              
-              <button
-                className="control-button secondary"
-                onClick={() => testAvatarSpeech()}
-                disabled={!isAvatarSessionActive}
-              >
-                🎭 Test Avatar
-              </button>
-              
-              <button
-                className="control-button secondary"
-                onClick={debugMicrophone}
-                disabled={appState.isListening}
-                title="Test microphone and speech setup"
-              >
-                🔍 Debug Microphone
-              </button>
-              
-              <button
-                className="control-button secondary"
-                onClick={() => performanceMetrics()}
-              >
-                🚀 Performance
-              </button>
-            </div>
+      {/* Main Layout */}
+      <div className="app-layout">
+        {/* Avatar Section */}
+        <div className="avatar-section">
+          <AzureAvatarPlayer 
+            isSessionActive={isAvatarSessionActive}
+            isSpeaking={isAvatarSpeaking}
+            onSessionStart={() => addNotification('Avatar session started', 'success')}
+            onSessionStop={() => addNotification('Avatar session stopped', 'info')}
+            onSpeakingStart={() => {
+              console.log('Avatar started speaking (from player)');
+              setIsAvatarSpeaking(true);
+            }}
+            onSpeakingStop={() => {
+              console.log('Avatar stopped speaking (from player)');
+              setIsAvatarSpeaking(false);
+            }}
+            onConnectionStateChange={(state) => setAvatarConnectionState(state)}
+            onLastEventChange={(event) => setAvatarLastEvent(event)}
+          />
+          
+          {/* Status Indicator */}
+          <div className="status-indicator">
+            <div className={`status-dot ${isAvatarSessionActive ? 'active' : 'inactive'}`}></div>
+            <span>{isAvatarSpeaking ? 'Speaking' : isAvatarSessionActive ? 'Ready' : 'Connecting'}</span>
           </div>
-
-          {/* Current Message Display */}
-          {appState.currentMessage && (
-            <div className="current-message">
-              <h4>You said:</h4>
-              <p>"{appState.currentMessage}"</p>
-              {appState.isProcessing && (
-                <div className="processing-indicator">
-                  <div className="spinner"></div>
-                  <span>Processing...</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Bot Response Display */}
-          {appState.botResponse && (
-            <div className="bot-response">
-              <h4>Bot replied:</h4>
-              <p>"{appState.botResponse}"</p>
-            </div>
-          )}
         </div>
 
-        {/* Conversation History */}
-        <ConversationHistory messages={conversationHistory} />
-      </main>
-
-      <footer className="app-footer">
-        <p>Powered by Azure Speech Services & Copilot Studio</p>
-      </footer>
+        {/* Chat Section */}
+        <div className="chat-section">
+          <ConversationHistory messages={conversationHistory} />
+          
+          {/* Input Area */}
+          <div className="input-area">
+            <ChatInput 
+              onSendMessage={sendMessage}
+              isProcessing={appState.isProcessing}
+              isListening={appState.isListening}
+              onStartListening={startListening}
+              onStopListening={stopListening}
+              isConnected={appState.isConnected}
+              onClearChat={clearConversation}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import type { SpeechConfig, BotConfig, AvatarConfig, AvatarApiConfig, LanguageOption, MultiLingualConfig } from '../types';
+import type { SpeechConfig, BotConfig, AvatarConfig, AvatarApiConfig, LanguageOption } from '../types';
 
 interface DynamicConfig {
   speechKey?: string;
@@ -11,13 +11,10 @@ interface DynamicConfig {
   avatarSubscriptionKey?: string;
   avatarRegion?: string;
   avatarEndpoint?: string;
-  // Multi-lingual settings
+  // Multi-lingual settings - removed, English-only
   recognitionLanguage?: string;
-  autoDetectLanguages?: string[];
   synthesisLanguage?: string;
   synthesisVoice?: string;
-  multiLingualEnabled?: boolean;
-  primaryLanguage?: string;
 }
 
 class ConfigService {
@@ -70,69 +67,16 @@ class ConfigService {
       speechRegion,
       speechEndpoint,
       recognitionLanguage: this.dynamicConfig.recognitionLanguage || 'en-US',
-      autoDetectLanguages: this.dynamicConfig.autoDetectLanguages || this.getDefaultAutoDetectLanguages(),
       synthesisLanguage: this.dynamicConfig.synthesisLanguage || 'en-US',
-      synthesisVoice: this.dynamicConfig.synthesisVoice || 'en-US-JennyMultilingualNeural'
+      synthesisVoice: this.dynamicConfig.synthesisVoice || 'en-US-JennyNeural'
     };
-  }
-
-  public getMultiLingualConfig(): MultiLingualConfig {
-    return {
-      autoDetect: this.dynamicConfig.multiLingualEnabled ?? false, // Default to English-only
-      primaryLanguage: this.dynamicConfig.primaryLanguage || 'en-US',
-      supportedLanguages: this.dynamicConfig.autoDetectLanguages || this.getDefaultAutoDetectLanguages(),
-      languageOptions: this.getAvailableLanguages()
-    };
-  }
-
-  private getDefaultAutoDetectLanguages(): string[] {
-    // Azure Speech Service DetectContinuous mode supports maximum 10 languages
-    // Using the most commonly spoken languages worldwide for optimal coverage
-    return [
-      'en-US', // English (US) - Most widely used
-      'es-ES', // Spanish (Spain) - 500M+ speakers
-      'fr-FR', // French (France) - 280M+ speakers
-      'de-DE', // German (Germany) - 100M+ speakers
-      'it-IT', // Italian (Italy) - 65M+ speakers
-      'pt-BR', // Portuguese (Brazil) - 230M+ speakers
-      'ja-JP', // Japanese (Japan) - 125M+ speakers
-      'ko-KR', // Korean (South Korea) - 77M+ speakers
-      'zh-CN', // Chinese (Mainland China) - 900M+ speakers
-      'ar-SA'  // Arabic (Saudi Arabia) - 420M+ speakers
-      // Note: Limited to 10 languages due to Azure DetectContinuous mode restriction
-    ];
   }
 
   public getAvailableLanguages(): LanguageOption[] {
+    // English-only support
     return [
-      { code: 'en-US', name: 'English (US)', voice: 'en-US-JennyMultilingualNeural', region: 'us' },
-      { code: 'en-GB', name: 'English (UK)', voice: 'en-GB-SoniaNeural', region: 'gb' },
-      { code: 'es-ES', name: 'Spanish (Spain)', voice: 'es-ES-ElviraNeural', region: 'es' },
-      { code: 'es-MX', name: 'Spanish (Mexico)', voice: 'es-MX-DaliaNeural', region: 'mx' },
-      { code: 'fr-FR', name: 'French (France)', voice: 'fr-FR-DeniseNeural', region: 'fr' },
-      { code: 'fr-CA', name: 'French (Canada)', voice: 'fr-CA-SylvieNeural', region: 'ca' },
-      { code: 'de-DE', name: 'German (Germany)', voice: 'de-DE-KatjaNeural', region: 'de' },
-      { code: 'it-IT', name: 'Italian (Italy)', voice: 'it-IT-ElsaNeural', region: 'it' },
-      { code: 'pt-BR', name: 'Portuguese (Brazil)', voice: 'pt-BR-FranciscaNeural', region: 'br' },
-      { code: 'pt-PT', name: 'Portuguese (Portugal)', voice: 'pt-PT-RaquelNeural', region: 'pt' },
-      { code: 'ja-JP', name: 'Japanese (Japan)', voice: 'ja-JP-NanamiNeural', region: 'jp' },
-      { code: 'ko-KR', name: 'Korean (South Korea)', voice: 'ko-KR-SunHiNeural', region: 'kr' },
-      { code: 'zh-CN', name: 'Chinese (Mainland)', voice: 'zh-CN-XiaoxiaoNeural', region: 'cn' },
-      { code: 'zh-HK', name: 'Chinese (Hong Kong)', voice: 'zh-HK-HiuMaanNeural', region: 'hk' },
-      { code: 'zh-TW', name: 'Chinese (Taiwan)', voice: 'zh-TW-HsiaoChenNeural', region: 'tw' },
-      { code: 'ar-SA', name: 'Arabic (Saudi Arabia)', voice: 'ar-SA-ZariyahNeural', region: 'sa' },
-      { code: 'hi-IN', name: 'Hindi (India)', voice: 'hi-IN-SwaraNeural', region: 'in' },
-      { code: 'th-TH', name: 'Thai (Thailand)', voice: 'th-TH-PremwadeeNeural', region: 'th' },
-      { code: 'vi-VN', name: 'Vietnamese (Vietnam)', voice: 'vi-VN-HoaiMyNeural', region: 'vn' },
-      { code: 'nl-NL', name: 'Dutch (Netherlands)', voice: 'nl-NL-ColetteNeural', region: 'nl' },
-      { code: 'sv-SE', name: 'Swedish (Sweden)', voice: 'sv-SE-SofieNeural', region: 'se' },
-      { code: 'da-DK', name: 'Danish (Denmark)', voice: 'da-DK-ChristelNeural', region: 'dk' },
-      { code: 'no-NO', name: 'Norwegian (Norway)', voice: 'nb-NO-PernilleNeural', region: 'no' },
-      { code: 'fi-FI', name: 'Finnish (Finland)', voice: 'fi-FI-SelmaNeural', region: 'fi' },
-      { code: 'ru-RU', name: 'Russian (Russia)', voice: 'ru-RU-SvetlanaNeural', region: 'ru' },
-      { code: 'pl-PL', name: 'Polish (Poland)', voice: 'pl-PL-ZofiaNeural', region: 'pl' },
-      { code: 'tr-TR', name: 'Turkish (Turkey)', voice: 'tr-TR-EmelNeural', region: 'tr' },
-      { code: 'he-IL', name: 'Hebrew (Israel)', voice: 'he-IL-HilaNeural', region: 'il' }
+      { code: 'en-US', name: 'English (US)', voice: 'en-US-JennyNeural', region: 'us' },
+      { code: 'en-GB', name: 'English (UK)', voice: 'en-GB-SoniaNeural', region: 'gb' }
     ];
   }
 

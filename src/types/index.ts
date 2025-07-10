@@ -4,24 +4,16 @@ export interface SpeechConfig {
   speechRegion: string;
   speechEndpoint: string;
   recognitionLanguage?: string;
-  autoDetectLanguages?: string[];
   synthesisLanguage?: string;
   synthesisVoice?: string;
 }
 
-// Language support types
+// Language support types - English only
 export interface LanguageOption {
   code: string;
   name: string;
   voice: string;
   region: string;
-}
-
-export interface MultiLingualConfig {
-  autoDetect: boolean;
-  primaryLanguage: string;
-  supportedLanguages: string[];
-  languageOptions: LanguageOption[];
 }
 
 // Direct Line Bot types
