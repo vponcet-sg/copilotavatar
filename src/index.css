@@ -20,14 +20,14 @@
 
 body {
   margin: 0;
-  min-width: 600px; /* Ensure minimum width for fixed layout */
+  min-width: 900px; /* Ensure minimum width for unified container layout */
   min-height: 100vh;
   overflow-x: auto; /* Allow horizontal scroll when needed */
 }
 
 #root {
   width: 100%;
-  min-width: 600px; /* Match body minimum width */
+  min-width: 900px; /* Match body minimum width for unified container */
   min-height: 100vh;
 }
 

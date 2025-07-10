@@ -209,12 +209,11 @@ body {
   transform: scale(1.05);
 }
 
-/* Main Layout - Fixed two-column system that never shifts */
+/* Main Layout - Unified container system */
 .app-layout {
   flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 420px;
-  gap: var(--spacing-2xl);
+  display: flex;
+  justify-content: center;
   padding: var(--spacing-2xl);
   min-width: 900px; /* Minimum width to maintain layout */
   width: 100%;
@@ -223,20 +222,71 @@ body {
   overflow-x: auto; /* Allow horizontal scroll if needed */
 }
 
-/* Avatar Section - Enhanced glassmorphism without hover effects */
+/* Unified Container - Seamlessly integrates avatar and chat */
+.unified-container {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr; /* Avatar larger, chat narrower */
+  gap: 0; /* No gap for seamless integration */
+  width: 100%;
+  max-width: 1000px;
+  min-height: 75vh;
+  background: var(--bg-glass);
+  border-radius: var(--radius-2xl);
+  border: var(--glass-border);
+  backdrop-filter: var(--glass-blur-strong);
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  position: relative;
+}
+
+.unified-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  pointer-events: none;
+}
+
+/* Seamless connector between avatar and chat */
+.avatar-section::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  right: 0;
+  width: 1px;
+  height: 60%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 20%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 80%,
+    transparent 100%
+  );
+  z-index: 2;
+}
+
+/* Avatar Section - Left side of unified container */
 .avatar-section {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 75vh;
-  background: var(--bg-glass);
-  border-radius: var(--radius-2xl);
-  border: var(--glass-border);
-  backdrop-filter: var(--glass-blur-strong);
+  padding: var(--spacing-2xl);
+  background: linear-gradient(
+    135deg,
+    var(--bg-glass) 0%,
+    var(--bg-secondary) 100%
+  );
+  border-right: var(--glass-border);
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-xl);
 }
 
 .avatar-section::before {
@@ -244,10 +294,10 @@ body {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1) 0%,
+    45deg,
+    rgba(102, 126, 234, 0.05) 0%,
     transparent 50%,
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(118, 75, 162, 0.03) 100%
   );
   pointer-events: none;
 }
@@ -316,15 +366,16 @@ body {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  background: var(--bg-glass-strong);
+  background: rgba(0, 0, 0, 0.3);
   backdrop-filter: var(--glass-blur);
   padding: var(--spacing-md) var(--spacing-lg);
   border-radius: var(--radius-lg);
   font-size: 0.9rem;
   color: var(--text-secondary);
   font-weight: 500;
-  border: var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: var(--shadow-md);
+  z-index: 3;
 }
 
 .status-dot {
@@ -356,17 +407,17 @@ body {
   box-shadow: 0 0 8px var(--warning);
 }
 
-/* Chat Section - Enhanced glassmorphism with fixed height */
+/* Chat Section - Right side of unified container */
 .chat-section {
   display: flex;
   flex-direction: column;
-  height: 75vh; /* Fixed height to match avatar section */
-  background: var(--bg-glass);
-  border-radius: var(--radius-2xl);
-  border: var(--glass-border);
-  backdrop-filter: var(--glass-blur-strong);
+  height: 100%; /* Take full height of unified container */
+  background: linear-gradient(
+    135deg,
+    var(--bg-secondary) 0%,
+    var(--bg-tertiary) 100%
+  );
   overflow: hidden;
-  box-shadow: var(--shadow-xl);
   position: relative;
 }
 
@@ -375,10 +426,10 @@ body {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.08) 0%,
+    225deg,
+    rgba(0, 212, 170, 0.05) 0%,
     transparent 50%,
-    rgba(255, 255, 255, 0.03) 100%
+    rgba(102, 126, 234, 0.03) 100%
   );
   pointer-events: none;
 }
@@ -392,6 +443,7 @@ body {
   position: relative;
   z-index: 1;
   overflow: hidden; /* Prevent overflow */
+  height: 100%; /* Take full available height */
 }
 
 .conversation-history.empty {
@@ -489,7 +541,7 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--spacing-xl);
+  padding: var(--spacing-lg) var(--spacing-md); /* Adjust horizontal padding for narrower chat */
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
@@ -522,7 +574,7 @@ body {
 .message {
   display: flex;
   flex-direction: column;
-  max-width: 85%;
+  max-width: 90%; /* Slightly wider for narrower chat */
   animation: messageSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -580,15 +632,20 @@ body {
   }
 }
 
-/* Input Area - Fixed at bottom with modern glassmorphism */
+/* Input Area - Fixed at bottom of chat section */
 .input-area {
-  border-top: var(--glass-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding: var(--spacing-lg);
-  background: var(--bg-glass);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
   backdrop-filter: var(--glass-blur);
   position: relative;
-  z-index: 1;
+  z-index: 2;
   flex-shrink: 0; /* Prevent shrinking */
+  margin-top: auto; /* Push to bottom */
 }
 
 .chat-input-container {
@@ -596,6 +653,15 @@ body {
   flex-direction: column;
   gap: var(--spacing-md);
   align-items: center;
+  max-width: 85%; /* Narrower for better proportions */
+  margin: 0 auto; /* Center the input */
+}
+
+@media (max-width: 768px) {
+  .chat-input-container {
+    gap: var(--spacing-sm);
+    max-width: 88%; /* Slightly narrower on tablet */
+  }
 }
 
 .chat-input-form {
@@ -608,13 +674,19 @@ body {
   align-items: flex-end;
   background: var(--bg-glass-strong);
   backdrop-filter: var(--glass-blur);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   border: var(--glass-border);
   transition: var(--transition);
   overflow: hidden;
   box-shadow: var(--shadow-md);
   width: 100%;
   margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .input-group {
+    border-radius: var(--radius-md); /* Smaller radius on mobile */
+  }
 }
 
 .input-group:focus-within {
@@ -648,8 +720,8 @@ body {
 .input-actions {
   display: flex;
   align-items: center;
-  padding: var(--spacing-md);
-  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  gap: var(--spacing-xs);
 }
 
 .voice-button, .send-button {
@@ -658,15 +730,15 @@ body {
   border: var(--glass-border);
   color: var(--text-secondary);
   cursor: pointer;
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm);
   border-radius: var(--radius-md);
   transition: var(--transition);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  font-size: 1.3rem;
+  min-width: 38px;
+  min-height: 38px;
+  font-size: 1.1rem;
   box-shadow: var(--shadow-sm);
 }
 
@@ -755,12 +827,12 @@ body {
   border: var(--glass-border);
   color: var(--text-muted);
   cursor: pointer;
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm);
   border-radius: var(--radius-md);
   transition: var(--transition);
-  font-size: 1.3rem;
-  min-width: 44px;
-  min-height: 44px;
+  font-size: 1.1rem;
+  min-width: 38px;
+  min-height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -923,18 +995,6 @@ button, .input-group, .message-content, .notification {
 }
 
 /* Micro-interactions and enhanced UX - optimized for performance */
-/* Enhanced button interactions */
-.voice-button:hover, .send-button:hover, .clear-button:hover {
-  transform: translateY(-1px);
-  background: var(--bg-glass-hover);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-md);
-}
-
-.voice-button:active, .send-button:active, .clear-button:active {
-  transform: translateY(0);
-}
-
 /* Typing indicator */
 .typing-indicator {
   display: flex;
@@ -1027,20 +1087,26 @@ button, .input-group, .message-content, .notification {
   box-shadow: var(--shadow-lg);
 }
 
-/* Responsive Design - Fixed layout with scaling only */
+/* Responsive Design - Unified container with scaling */
 @media (max-width: 1200px) {
   .app-layout {
-    gap: var(--spacing-xl);
     padding: var(--spacing-xl);
     min-width: 800px; /* Slightly smaller minimum */
   }
   
+  .unified-container {
+    min-height: 60vh;
+    max-width: 900px;
+    grid-template-columns: 1.2fr 0.8fr; /* Keep avatar larger, chat narrower */
+  }
+  
   .avatar-section {
     min-height: 60vh;
+    padding: var(--spacing-xl);
   }
   
   .chat-section {
-    height: 60vh; /* Match avatar section height */
+    height: 100%; /* Match unified container height */
   }
   
   .avatar-video-container {
@@ -1051,20 +1117,24 @@ button, .input-group, .message-content, .notification {
 
 @media (max-width: 768px) {
   .app-layout {
-    gap: var(--spacing-lg);
     padding: var(--spacing-lg);
-    min-width: 700px; /* Maintain two-column layout */
-    grid-template-columns: 1fr 320px; /* Smaller chat section */
+    min-width: 700px; /* Maintain unified layout */
+  }
+  
+  .unified-container {
+    grid-template-columns: 1.2fr 0.8fr; /* Keep avatar larger, chat narrower on tablet */
+    min-height: 55vh;
+    max-width: 800px;
+    border-radius: var(--radius-xl);
   }
   
   .avatar-section {
     min-height: 55vh;
-    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
   }
   
   .chat-section {
-    height: 55vh; /* Match avatar section height */
-    border-radius: var(--radius-xl);
+    height: 100%; /* Match unified container height */
   }
   
   .avatar-video-container {
@@ -1074,7 +1144,7 @@ button, .input-group, .message-content, .notification {
   }
   
   .message {
-    max-width: 95%;
+    max-width: 95%; /* Full width for mobile narrower chat */
     font-size: 0.9rem;
   }
   
@@ -1089,6 +1159,7 @@ button, .input-group, .message-content, .notification {
   
   .chat-input-container {
     gap: var(--spacing-sm);
+    max-width: 88%; /* Slightly narrower on tablet */
   }
   
   .voice-button, .send-button, .clear-button {
@@ -1112,20 +1183,24 @@ button, .input-group, .message-content, .notification {
 
 @media (max-width: 480px) {
   .app-layout {
-    gap: var(--spacing-md);
     padding: var(--spacing-md);
-    min-width: 600px; /* Maintain two-column layout even on phones */
-    grid-template-columns: 1fr 280px; /* Smaller chat section */
+    min-width: 600px; /* Maintain unified layout even on phones */
+  }
+  
+  .unified-container {
+    grid-template-columns: 1.2fr 0.8fr; /* Keep avatar larger, chat narrower on mobile */
+    min-height: 50vh;
+    max-width: 700px;
+    border-radius: var(--radius-lg);
   }
   
   .avatar-section {
     min-height: 50vh;
-    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
   }
   
   .chat-section {
-    height: 50vh; /* Match avatar section height */
-    border-radius: var(--radius-lg);
+    height: 100%; /* Match unified container height */
   }
   
   .avatar-video-container {
@@ -1144,6 +1219,7 @@ button, .input-group, .message-content, .notification {
   
   .chat-input-container {
     gap: var(--spacing-sm);
+    max-width: 85%; /* Even narrower for mobile */
   }
   
   .message-content {
@@ -1199,13 +1275,6 @@ button, .input-group, .message-content, .notification {
 .input-group {
   margin: 0 auto;
   width: 100%;
-}
-
-.input-area {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
 }
 
 /* Hide video when placeholder is shown */

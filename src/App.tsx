@@ -80,7 +80,6 @@ const App: React.FC = () => {
         setIsAvatarSessionActive(true);
 
         // Auto-start speech recognition when avatar session is active
-        console.log('🎤 Auto-starting speech recognition with avatar session...');
         try {
           // Check microphone permission first
           const hasPermission = await speechServiceRef.current.checkMicrophonePermission();
@@ -89,14 +88,11 @@ const App: React.FC = () => {
             setTimeout(async () => {
               if (!appState.isListening && !isMicrophoneMuted) {
                 await startListening();
-                console.log('✅ Speech recognition auto-started with avatar session');
               }
             }, 500); // Small delay to ensure avatar is fully initialized
-          } else {
-            console.log('⚠️ Microphone permission not granted, user will need to manually start listening');
           }
         } catch (error) {
-          console.warn('Failed to auto-start speech recognition:', error);
+          // Auto-start failed - user will need to manually start
         }
 
         console.log('All services initialized successfully');
@@ -516,61 +512,64 @@ const App: React.FC = () => {
 
       {/* Main Layout */}
       <div className="app-layout">
-        {/* Avatar Section */}
-        <div className="avatar-section">
-          <AzureAvatarPlayer 
-            isSessionActive={isAvatarSessionActive}
-            isSpeaking={isAvatarSpeaking}
-            onSessionStart={() => {
-              addNotification('Avatar session started', 'success');
-              // Auto-start speech recognition when avatar session starts
-              console.log('🎤 Avatar session started - auto-starting speech recognition...');
-              setTimeout(async () => {
-                if (!appState.isListening && !isMicrophoneMuted && speechServiceRef.current) {
-                  try {
-                    await startListening();
-                    console.log('✅ Speech recognition auto-started with avatar session');
-                  } catch (error) {
-                    console.warn('Failed to auto-start speech recognition:', error);
+        {/* Unified Container - Seamlessly integrating avatar and chat */}
+        <div className="unified-container">
+          {/* Avatar Section */}
+          <div className="avatar-section">
+            <AzureAvatarPlayer 
+              isSessionActive={isAvatarSessionActive}
+              isSpeaking={isAvatarSpeaking}
+              onSessionStart={() => {
+                addNotification('Avatar session started', 'success');
+                // Auto-start speech recognition when avatar session starts
+                console.log('🎤 Avatar session started - auto-starting speech recognition...');
+                setTimeout(async () => {
+                  if (!appState.isListening && !isMicrophoneMuted && speechServiceRef.current) {
+                    try {
+                      await startListening();
+                      console.log('✅ Speech recognition auto-started with avatar session');
+                    } catch (error) {
+                      console.warn('Failed to auto-start speech recognition:', error);
+                    }
                   }
-                }
-              }, 100); // Minimal delay for immediate startup
-            }}
-            onSessionStop={() => addNotification('Avatar session stopped', 'info')}
-            onSpeakingStart={() => {
-              console.log('Avatar started speaking (from player)');
-              setIsAvatarSpeaking(true);
-            }}
-            onSpeakingStop={() => {
-              console.log('Avatar stopped speaking (from player)');
-              setIsAvatarSpeaking(false);
-            }}
-            onConnectionStateChange={(state) => setAvatarConnectionState(state)}
-            onLastEventChange={(event) => setAvatarLastEvent(event)}
-          />
-          
-          {/* Status Indicator */}
-          <div className="status-indicator">
-            <div className={`status-dot ${isAvatarSessionActive ? 'active' : 'inactive'}`}></div>
-            <span>{isAvatarSpeaking ? 'Speaking' : isAvatarSessionActive ? 'Ready' : 'Connecting'}</span>
-          </div>
-        </div>
-
-        {/* Chat Section */}
-        <div className="chat-section">
-          <ConversationHistory messages={conversationHistory} />
-          
-          {/* Input Area */}
-          <div className="input-area">
-            <ChatInput 
-              onSendMessage={sendMessage}
-              isProcessing={appState.isProcessing}
-              isListening={appState.isListening}
-              onStartListening={startListening}
-              onStopListening={stopListening}
-              isConnected={appState.isConnected}
-              onClearChat={clearConversation}
+                }, 100); // Minimal delay for immediate startup
+              }}
+              onSessionStop={() => addNotification('Avatar session stopped', 'info')}
+              onSpeakingStart={() => {
+                console.log('Avatar started speaking (from player)');
+                setIsAvatarSpeaking(true);
+              }}
+              onSpeakingStop={() => {
+                console.log('Avatar stopped speaking (from player)');
+                setIsAvatarSpeaking(false);
+              }}
+              onConnectionStateChange={(state) => setAvatarConnectionState(state)}
+              onLastEventChange={(event) => setAvatarLastEvent(event)}
             />
+            
+            {/* Status Indicator */}
+            <div className="status-indicator">
+              <div className={`status-dot ${isAvatarSessionActive ? 'active' : 'inactive'}`}></div>
+              <span>{isAvatarSpeaking ? 'Speaking' : isAvatarSessionActive ? 'Ready' : 'Connecting'}</span>
+            </div>
+          </div>
+
+          {/* Chat Section */}
+          <div className="chat-section">
+            <ConversationHistory messages={conversationHistory} />
+            
+            {/* Input Area */}
+            <div className="input-area">
+              <ChatInput 
+                onSendMessage={sendMessage}
+                isProcessing={appState.isProcessing}
+                isListening={appState.isListening}
+                onStartListening={startListening}
+                onStopListening={stopListening}
+                isConnected={appState.isConnected}
+                onClearChat={clearConversation}
+              />
+            </div>
           </div>
         </div>
       </div>

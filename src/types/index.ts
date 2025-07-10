@@ -45,12 +45,6 @@ export interface AvatarApiConfig {
   endpoint: string;
 }
 
-export interface AvatarSynthesisJob {
-  id: string;
-  status: 'Running' | 'Succeeded' | 'Failed';
-  downloadUrl?: string;
-}
-
 // App state types
 export interface AppState {
   isListening: boolean;
