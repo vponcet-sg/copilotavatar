@@ -356,10 +356,11 @@ body {
   box-shadow: 0 0 8px var(--warning);
 }
 
-/* Chat Section - Enhanced glassmorphism without hover effects */
+/* Chat Section - Enhanced glassmorphism with fixed height */
 .chat-section {
   display: flex;
   flex-direction: column;
+  height: 75vh; /* Fixed height to match avatar section */
   background: var(--bg-glass);
   border-radius: var(--radius-2xl);
   border: var(--glass-border);
@@ -382,20 +383,20 @@ body {
   pointer-events: none;
 }
 
-/* Conversation History - Refined */
+/* Conversation History - Refined with proper scrolling */
 .conversation-history {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-height: 0; /* Allow flex shrinking */
   position: relative;
   z-index: 1;
+  overflow: hidden; /* Prevent overflow */
 }
 
 .conversation-history.empty {
   justify-content: center;
   align-items: center;
-  min-height: 55vh;
 }
 
 .empty-state {
@@ -487,15 +488,18 @@ body {
 .messages-container {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--spacing-xl);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
   scroll-behavior: smooth;
+  min-height: 0; /* Allow flex shrinking */
 }
 
+/* Custom scrollbar for modern look */
 .messages-container::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .messages-container::-webkit-scrollbar-track {
@@ -504,9 +508,10 @@ body {
 
 .messages-container::-webkit-scrollbar-thumb {
   background: var(--bg-glass-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 2px solid transparent;
   background-clip: content-box;
+  transition: var(--transition);
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
@@ -575,14 +580,15 @@ body {
   }
 }
 
-/* Input Area - Modern glassmorphism */
+/* Input Area - Fixed at bottom with modern glassmorphism */
 .input-area {
   border-top: var(--glass-border);
-  padding: var(--spacing-xl);
+  padding: var(--spacing-lg);
   background: var(--bg-glass);
   backdrop-filter: var(--glass-blur);
   position: relative;
   z-index: 1;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .chat-input-container {
@@ -967,28 +973,7 @@ button, .input-group, .message-content, .notification {
   }
 }
 
-/* Enhanced scrollbar for webkit browsers */
-.messages-container::-webkit-scrollbar {
-  width: 8px;
-}
 
-.messages-container::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 4px;
-}
-
-.messages-container::-webkit-scrollbar-thumb {
-  background: var(--bg-glass-strong);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-  transition: var(--transition);
-}
-
-.messages-container::-webkit-scrollbar-thumb:hover {
-  background: var(--bg-glass-hover);
-  background-clip: content-box;
-}
 
 /* Custom selection styles */
 ::selection {
@@ -1054,6 +1039,10 @@ button, .input-group, .message-content, .notification {
     min-height: 60vh;
   }
   
+  .chat-section {
+    height: 60vh; /* Match avatar section height */
+  }
+  
   .avatar-video-container {
     max-width: 350px;
     aspect-ratio: 9/16;
@@ -1065,15 +1054,16 @@ button, .input-group, .message-content, .notification {
     gap: var(--spacing-lg);
     padding: var(--spacing-lg);
     min-width: 700px; /* Maintain two-column layout */
-    grid-template-columns: 1fr 350px; /* Slightly smaller chat section */
+    grid-template-columns: 1fr 320px; /* Smaller chat section */
   }
   
   .avatar-section {
-    min-height: 50vh;
+    min-height: 55vh;
     border-radius: var(--radius-xl);
   }
   
   .chat-section {
+    height: 55vh; /* Match avatar section height */
     border-radius: var(--radius-xl);
   }
   
@@ -1088,20 +1078,9 @@ button, .input-group, .message-content, .notification {
     font-size: 0.9rem;
   }
   
-  .notifications {
-    top: var(--spacing-md);
-    right: var(--spacing-md);
-    left: var(--spacing-md);
-  }
-  
-  .notification {
-    min-width: auto;
-    padding: var(--spacing-md);
-    font-size: 0.9rem;
-  }
-  
   .messages-container {
     padding: var(--spacing-md);
+    gap: var(--spacing-md);
   }
   
   .input-area {
@@ -1117,6 +1096,18 @@ button, .input-group, .message-content, .notification {
     min-height: 40px;
     font-size: 1.1rem;
   }
+  
+  .notifications {
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    left: var(--spacing-md);
+  }
+  
+  .notification {
+    min-width: auto;
+    padding: var(--spacing-md);
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1124,15 +1115,16 @@ button, .input-group, .message-content, .notification {
     gap: var(--spacing-md);
     padding: var(--spacing-md);
     min-width: 600px; /* Maintain two-column layout even on phones */
-    grid-template-columns: 1fr 300px; /* Even smaller chat section */
+    grid-template-columns: 1fr 280px; /* Smaller chat section */
   }
   
   .avatar-section {
-    min-height: 45vh;
+    min-height: 50vh;
     border-radius: var(--radius-lg);
   }
   
   .chat-section {
+    height: 50vh; /* Match avatar section height */
     border-radius: var(--radius-lg);
   }
   
@@ -1141,10 +1133,9 @@ button, .input-group, .message-content, .notification {
     aspect-ratio: 9/16;
   }
   
-  .notifications {
-    top: var(--spacing-sm);
-    right: var(--spacing-sm);
-    left: var(--spacing-sm);
+  .messages-container {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
   }
   
   .input-area {
@@ -1171,6 +1162,12 @@ button, .input-group, .message-content, .notification {
     left: var(--spacing-sm);
     padding: var(--spacing-sm);
     font-size: 0.8rem;
+  }
+  
+  .notifications {
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    left: var(--spacing-sm);
   }
 }
 
