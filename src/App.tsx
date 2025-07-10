@@ -141,7 +141,16 @@ const App: React.FC = () => {
       // Immediately speak the bot response using Azure Avatar Real-Time Service
       try {
         if (azureAvatarServiceRef.current && botMessage.text.trim()) {
-          // Use English-only voice
+          // Check if avatar is already speaking and log queue status
+          const currentlySpeaking = azureAvatarServiceRef.current.isSpeakingNow();
+          const queueLength = azureAvatarServiceRef.current.getQueueLength();
+          const deviceId = azureAvatarServiceRef.current.getDeviceSessionId();
+          
+          if (currentlySpeaking || queueLength > 0) {
+            console.log(`🎭 Device ${deviceId} - Avatar busy - Speaking: ${currentlySpeaking}, Queue: ${queueLength}`);
+          }
+          
+          // Use English-only voice - this will automatically queue if needed
           await azureAvatarServiceRef.current.speakWithAutoVoice(botMessage.text, 'en-US');
         }
       } catch (error) {

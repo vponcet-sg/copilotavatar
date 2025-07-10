@@ -2,8 +2,14 @@ import * as SpeechSDK from 'microsoft-cognitiveservices-speech-sdk';
 import ConfigService from './ConfigService';
 
 /**
- * Azure Avatar Real-Time Service - Performance Optimized
+ * Azure Avatar Real-Time Service - Performance Optimized with Multi-Device Support
  * Implements real-time avatar video generation using Azure Speech Services Avatar API
+ * 
+ * Multi-Device Architecture:
+ * - Supports concurrent sessions from multiple devices/browsers (10+ simultaneous users)
+ * - Each device/browser instance maintains its own isolated session and queue
+ * - Prevents concurrent requests only within the same device/browser instance
+ * - Uses unique device session IDs for isolation and debugging
  * 
  * Performance Optimizations:
  * - Reduced logging during video playback to prevent UI lag
@@ -12,30 +18,67 @@ import ConfigService from './ConfigService';
  * - Minimized video element manipulations and event handler complexity
  * - Deferred non-critical event emissions to prevent blocking avatar speech
  * 
+ * Concurrency Protection (Per Device):
+ * - Only one avatar session per device/browser
+ * - Only one speaking request at a time per device
+ * - Request queuing system for multiple speak requests on same device
+ * - Proper cleanup and state management per device
+ * 
  * Reference: https://docs.microsoft.com/en-us/azure/ai-services/speech-service/how-to-speech-synthesis-avatar
  */
 export class AzureAvatarRealTimeService {
   private avatarSynthesizer: SpeechSDK.AvatarSynthesizer | null = null;
   private peerConnection: RTCPeerConnection | null = null;
   private isSessionActive = false;
+  private isSessionStarting = false; // Prevent concurrent session starts on THIS device
+  private isSpeaking = false; // Prevent concurrent speaking requests on THIS device
+  private speakQueue: Array<{ text: string; voice?: string; resolve: () => void; reject: (error: any) => void }> = [];
   private configService: ConfigService;
+  private deviceSessionId: string; // Unique identifier for this device/browser session
 
   constructor() {
     this.configService = ConfigService.getInstance();
+    // Generate unique device session ID for this browser/device instance
+    this.deviceSessionId = this.generateDeviceSessionId();
+    console.log(`🔧 Avatar service initialized for device: ${this.deviceSessionId}`);
   }
 
   /**
-   * Initialize and start the avatar session
+   * Generate unique device session ID
+   */
+  private generateDeviceSessionId(): string {
+    // Use combination of timestamp, random number, and browser fingerprint
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2);
+    const userAgent = navigator.userAgent.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '');
+    return `device-${userAgent}-${timestamp}-${random}`;
+  }
+
+  /**
+   * Initialize and start the avatar session for this device
    */
   public async startSession(
     talkingAvatarCharacter: string = 'lisa',
     talkingAvatarStyle: string = 'casual-sitting',
     videoElementId: string = 'avatarVideo'
   ): Promise<void> {
+    // Prevent concurrent session starts on THIS device only
     if (this.isSessionActive) {
-      console.log('Avatar session already active');
+      console.log(`📱 Avatar session already active on device: ${this.deviceSessionId}`);
       return;
     }
+    
+    if (this.isSessionStarting) {
+      console.log(`📱 Avatar session already starting on device: ${this.deviceSessionId}, waiting...`);
+      // Wait for current session start to complete on THIS device
+      while (this.isSessionStarting) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return;
+    }
+
+    this.isSessionStarting = true;
+    console.log(`🚀 Starting avatar session for device: ${this.deviceSessionId}`);
 
     try {
       const speechConfig = this.createSpeechConfig();
@@ -55,14 +98,16 @@ export class AzureAvatarRealTimeService {
         videoElementId
       );
 
-      console.log('🎉 Azure Avatar Real-Time session started successfully');
+      console.log(`🎉 Azure Avatar Real-Time session started successfully for device: ${this.deviceSessionId}`);
       this.isSessionActive = true;
+      this.isSessionStarting = false;
 
-      // Emit session started event
-      this.emitEvent('sessionStarted', { message: 'Avatar session started' });
+      // Emit session started event with device info
+      this.emitEvent('sessionStarted', { message: 'Avatar session started', deviceId: this.deviceSessionId });
       
     } catch (error) {
-      console.error('❌ Failed to start avatar session:', error);
+      this.isSessionStarting = false;
+      console.error(`❌ Failed to start avatar session for device ${this.deviceSessionId}:`, error);
       
       // Enhanced error logging
       if (error instanceof Error) {
@@ -79,12 +124,26 @@ export class AzureAvatarRealTimeService {
   }
 
   /**
-   * Speak text using the avatar with multi-lingual support - ultra-optimized for minimal lag
+   * Speak text using the avatar with multi-lingual support - with per-device concurrency protection
    */
   public async speak(text: string, voice?: string): Promise<void> {
     if (!this.avatarSynthesizer || !this.isSessionActive) {
-      throw new Error('Avatar session not started. Call startSession() first.');
+      throw new Error(`Avatar session not started on device ${this.deviceSessionId}. Call startSession() first.`);
     }
+
+    console.log(`🎭 Speak request for device ${this.deviceSessionId} - Current state: speaking=${this.isSpeaking}, queue=${this.speakQueue.length}`);
+
+    // Add to queue if currently speaking on THIS device
+    if (this.isSpeaking) {
+      console.log(`🎭 Avatar currently speaking on device ${this.deviceSessionId}, queueing request...`);
+      return new Promise((resolve, reject) => {
+        this.speakQueue.push({ text, voice, resolve, reject });
+        console.log(`📋 Request queued for device ${this.deviceSessionId}, new queue length: ${this.speakQueue.length}`);
+      });
+    }
+
+    this.isSpeaking = true;
+    console.log(`🎭 Device ${this.deviceSessionId} starting to speak:`, text.substring(0, 50) + (text.length > 50 ? '...' : ''));
 
     try {
       // Ultra-fast voice determination
@@ -94,34 +153,59 @@ export class AzureAvatarRealTimeService {
       const ssml = this.createSSML(text, selectedVoice);
       
       // Fire-and-forget event emission to prevent any blocking
-      setTimeout(() => this.emitEvent('speakingStarted', { text, voice: selectedVoice }), 0);
+      setTimeout(() => this.emitEvent('speakingStarted', { text, voice: selectedVoice, deviceId: this.deviceSessionId }), 0);
 
-      // Ultra-fast speaking
+      // Ultra-fast speaking - ensure only one call at a time per device
       const result = await this.avatarSynthesizer.speakSsmlAsync(ssml);
 
       // Non-blocking result handling
       setTimeout(() => {
         if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
-          this.emitEvent('speakingCompleted', { text, voice: selectedVoice, resultId: result.resultId });
+          this.emitEvent('speakingCompleted', { text, voice: selectedVoice, resultId: result.resultId, deviceId: this.deviceSessionId });
         } else {
-          this.emitEvent('speakingError', { error: `Speech synthesis failed: ${result.reason}`, voice: selectedVoice });
+          this.emitEvent('speakingError', { error: `Speech synthesis failed: ${result.reason}`, voice: selectedVoice, deviceId: this.deviceSessionId });
         }
       }, 0);
 
     } catch (error) {
-      console.error('❌ Avatar speaking failed:', error);
-      setTimeout(() => this.emitEvent('speakingError', { error: error instanceof Error ? error.message : String(error) }), 0);
+      console.error(`❌ Avatar speaking failed on device ${this.deviceSessionId}:`, error);
+      setTimeout(() => this.emitEvent('speakingError', { error: error instanceof Error ? error.message : String(error), deviceId: this.deviceSessionId }), 0);
       throw error;
+    } finally {
+      this.isSpeaking = false;
+      console.log(`🎭 Device ${this.deviceSessionId} finished speaking, queue length: ${this.speakQueue.length}`);
+      // Process next item in queue for this device
+      this.processNextInQueue();
     }
   }
 
   /**
-   * Stop current speaking - ultra-fast for instant response
+   * Process next speaking request in queue for this device
+   */
+  private async processNextInQueue(): Promise<void> {
+    if (this.speakQueue.length > 0 && !this.isSpeaking) {
+      console.log(`🎭 Device ${this.deviceSessionId} processing next item in queue (${this.speakQueue.length} remaining)`);
+      const nextRequest = this.speakQueue.shift()!;
+      try {
+        await this.speak(nextRequest.text, nextRequest.voice);
+        nextRequest.resolve();
+      } catch (error) {
+        nextRequest.reject(error);
+      }
+    }
+  }
+
+  /**
+   * Stop current speaking on this device - ultra-fast for instant response
    */
   public async stopSpeaking(): Promise<void> {
     if (!this.avatarSynthesizer) {
       return;
     }
+
+    // Clear the speaking queue to prevent further requests on this device
+    this.speakQueue = [];
+    console.log(`🛑 Stopping speech on device ${this.deviceSessionId}`);
 
     try {
       // Instant stop with very short timeout
@@ -129,8 +213,8 @@ export class AzureAvatarRealTimeService {
         new Promise<void>((resolve, reject) => {
           this.avatarSynthesizer!.stopSpeakingAsync()
             .then(() => {
-              console.log('Avatar stopped speaking');
-              setTimeout(() => this.emitEvent('speakingStopped', {}), 0);
+              console.log(`Avatar stopped speaking on device ${this.deviceSessionId}`);
+              setTimeout(() => this.emitEvent('speakingStopped', { deviceId: this.deviceSessionId }), 0);
               resolve();
             })
             .catch(reject);
@@ -140,42 +224,51 @@ export class AzureAvatarRealTimeService {
         )
       ]);
     } catch (error) {
-      console.warn('Stop speaking timeout (non-critical):', error);
+      console.warn(`Stop speaking timeout on device ${this.deviceSessionId} (non-critical):`, error);
       // Emit stopped event anyway to keep UI responsive
-      setTimeout(() => this.emitEvent('speakingStopped', {}), 0);
+      setTimeout(() => this.emitEvent('speakingStopped', { deviceId: this.deviceSessionId }), 0);
+    } finally {
+      this.isSpeaking = false;
     }
   }
 
   /**
-   * Stop the avatar session
+   * Stop the avatar session for this device
    */
   public async stopSession(): Promise<void> {
     if (!this.isSessionActive) {
       return;
     }
 
+    console.log(`🛑 Stopping avatar session for device ${this.deviceSessionId}`);
+
     try {
+      // Clear any pending speaking requests on this device
+      this.speakQueue = [];
+      this.isSpeaking = false;
+      
       // Stop any current speaking
       await this.stopSpeaking();
 
-      // Close avatar synthesizer
+      // Close avatar synthesizer for this device
       if (this.avatarSynthesizer) {
         this.avatarSynthesizer.close();
         this.avatarSynthesizer = null;
       }
 
-      // Close WebRTC connection
+      // Close WebRTC connection for this device
       if (this.peerConnection) {
         this.peerConnection.close();
         this.peerConnection = null;
       }
 
       this.isSessionActive = false;
-      console.log('Avatar session stopped');
-      this.emitEvent('sessionStopped', {});
+      this.isSessionStarting = false;
+      console.log(`Avatar session stopped for device ${this.deviceSessionId}`);
+      this.emitEvent('sessionStopped', { deviceId: this.deviceSessionId });
       
     } catch (error) {
-      console.error('Failed to stop avatar session:', error);
+      console.error(`Failed to stop avatar session for device ${this.deviceSessionId}:`, error);
       throw error;
     }
   }
@@ -281,9 +374,17 @@ export class AzureAvatarRealTimeService {
   }
 
   /**
-   * Set up WebRTC peer connection
+   * Set up WebRTC peer connection for this device
    */
   private async setupWebRTC(iceServerInfo: { url: string; username: string; credential: string }, videoElementId: string): Promise<void> {
+    // Close any existing peer connection to prevent multiple concurrent connections on this device
+    if (this.peerConnection) {
+      console.log(`🧹 Closing existing peer connection for device ${this.deviceSessionId}`);
+      this.peerConnection.close();
+      this.peerConnection = null;
+    }
+
+    console.log(`🔗 Creating WebRTC peer connection for device ${this.deviceSessionId}`);
     // Create WebRTC peer connection
     this.peerConnection = new RTCPeerConnection({
       iceServers: [{
@@ -377,13 +478,13 @@ export class AzureAvatarRealTimeService {
       
       // Only log important state changes to prevent performance issues
       if (state === 'connected' || state === 'failed' || state === 'disconnected') {
-        console.log('WebRTC connection state:', state);
+        console.log(`WebRTC connection state for device ${this.deviceSessionId}:`, state);
       }
       
-      this.emitEvent('connectionStateChanged', { state });
+      this.emitEvent('connectionStateChanged', { state, deviceId: this.deviceSessionId });
       
       if (state === 'failed' || state === 'disconnected') {
-        this.emitEvent('connectionError', { state });
+        this.emitEvent('connectionError', { state, deviceId: this.deviceSessionId });
       }
     };
 
@@ -597,7 +698,7 @@ export class AzureAvatarRealTimeService {
       const config = configurations[i];
       
       try {
-        console.log(`🔄 Trying avatar configuration ${i + 1}/${configurations.length}:`, config);
+        console.log(`🔄 Trying avatar configuration ${i + 1}/${configurations.length} for device ${this.deviceSessionId}:`, config);
         
         const avatarConfig = this.createAvatarConfig(config.character, config.style);
         avatarConfig.remoteIceServers = [{
@@ -606,16 +707,27 @@ export class AzureAvatarRealTimeService {
           credential: iceServerInfo.credential
         }];
 
-        console.log('🔄 Creating avatar synthesizer...');
+        console.log(`🔄 Creating avatar synthesizer for device ${this.deviceSessionId}...`);
         console.log('📋 Avatar configuration:', {
           character: config.character,
           style: config.style,
           hasRemoteIceServers: !!avatarConfig.remoteIceServers,
-          iceServerCount: avatarConfig.remoteIceServers?.length || 0
+          iceServerCount: avatarConfig.remoteIceServers?.length || 0,
+          deviceId: this.deviceSessionId
         });
         
+        // Clean up any existing avatar synthesizer to prevent multiple instances on this device
+        if (this.avatarSynthesizer) {
+          try {
+            this.avatarSynthesizer.close();
+          } catch (closeError) {
+            console.warn(`Failed to close existing avatar synthesizer for device ${this.deviceSessionId}:`, closeError);
+          }
+          this.avatarSynthesizer = null;
+        }
+        
         this.avatarSynthesizer = new SpeechSDK.AvatarSynthesizer(speechConfig, avatarConfig);
-        console.log('✅ Avatar synthesizer created successfully');
+        console.log(`✅ Avatar synthesizer created successfully for device ${this.deviceSessionId}`);
         
         // Set up event handlers
         this.setupEventHandlers();
@@ -626,18 +738,18 @@ export class AzureAvatarRealTimeService {
         await this.setupWebRTC(iceServerInfo, videoElementId);
         console.log('✅ WebRTC connection established');
 
-        console.log(`🎉 Azure Avatar Real-Time session started successfully with ${config.character}/${config.style}`);
+        console.log(`🎉 Azure Avatar Real-Time session started successfully with ${config.character}/${config.style} for device ${this.deviceSessionId}`);
         return; // Success! Exit the function
         
       } catch (error) {
-        console.warn(`❌ Failed to start avatar with ${config.character}/${config.style}:`, error);
+        console.warn(`❌ Failed to start avatar with ${config.character}/${config.style} for device ${this.deviceSessionId}:`, error);
         
-        // Clean up failed attempt
+        // Clean up failed attempt on this device
         if (this.avatarSynthesizer) {
           try {
             this.avatarSynthesizer.close();
           } catch (closeError) {
-            console.warn('Failed to close avatar synthesizer:', closeError);
+            console.warn(`Failed to close avatar synthesizer for device ${this.deviceSessionId}:`, closeError);
           }
           this.avatarSynthesizer = null;
         }
@@ -676,6 +788,62 @@ export class AzureAvatarRealTimeService {
     
     await this.speak(text, bestVoice);
   }
+
+  /**
+   * Check if avatar is currently speaking
+   */
+  public isSpeakingNow(): boolean {
+    return this.isSpeaking;
+  }
+
+  /**
+   * Get current queue length
+   */
+  public getQueueLength(): number {
+    return this.speakQueue.length;
+  }
+
+  /**
+   * Clear the speaking queue for this device
+   */
+  public clearQueue(): void {
+    const queueLength = this.speakQueue.length;
+    this.speakQueue = [];
+    if (queueLength > 0) {
+      console.log(`🧹 Cleared ${queueLength} items from speaking queue for device ${this.deviceSessionId}`);
+    }
+  }
+
+  /**
+   * Debug information for troubleshooting concurrent requests on this device
+   */
+  public getDebugInfo(): { 
+    deviceSessionId: string;
+    isSessionActive: boolean; 
+    isSessionStarting: boolean; 
+    isSpeaking: boolean; 
+    queueLength: number;
+    hasAvatarSynthesizer: boolean;
+    hasPeerConnection: boolean;
+  } {
+    return {
+      deviceSessionId: this.deviceSessionId,
+      isSessionActive: this.isSessionActive,
+      isSessionStarting: this.isSessionStarting,
+      isSpeaking: this.isSpeaking,
+      queueLength: this.speakQueue.length,
+      hasAvatarSynthesizer: !!this.avatarSynthesizer,
+      hasPeerConnection: !!this.peerConnection
+    };
+  }
+
+  /**
+   * Get the unique device session ID
+   */
+  public getDeviceSessionId(): string {
+    return this.deviceSessionId;
+  }
+
 }
 
 export default AzureAvatarRealTimeService;
