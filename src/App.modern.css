@@ -1166,7 +1166,7 @@ button, .input-group, .message-content, .notification {
   }
   
   .chat-input-container {
-    max-width: 90%; /* Narrower to match proportions */
+    max-width: 95%; /* Slightly wider to balance the narrower avatar */
     padding: 0;
   }
 }
@@ -1201,7 +1201,7 @@ button, .input-group, .message-content, .notification {
   }
   
   .chat-input-container {
-    max-width: 85%; /* Even narrower on desktop */
+    max-width: 90%; /* Better balance with narrower avatar section */
   }
 }
 
