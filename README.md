@@ -46,10 +46,21 @@ graph TB
 ```
 
 ### **Data Flow Pipeline**
-1. **🎤 Speech Input** → Azure Speech Services converts speech to text
-2. **🧠 AI Processing** → Copilot Studio bot processes the text and generates intelligent responses
-3. **👤 Avatar Generation** → Azure Avatar Real-Time API creates live video with speech synthesis
-4. **🌐 Real-time Delivery** → WebRTC streams the avatar video with synchronized audio
+1. **🎤 Speech Input** → Azure Speech SDK converts speech to text via continuous recognition
+2. **🧠 AI Processing** → Copilot Studio bot processes the text via Direct Line API and generates intelligent responses
+3. **👤 Avatar Generation** → Azure Avatar Real-Time API creates live video with speech synthesis using SSML
+4. **🌐 Real-time Delivery** → WebRTC streams the avatar video with synchronized audio and lip-sync
+
+### **Technical Implementation Flow**
+
+```typescript
+// 1. Speech Recognition → Bot Message
+User Speech → SpeechService.startRecognition() → BotService.sendMessage()
+
+// 2. Bot Response → Avatar Speech
+BotService (receives response) → emits 'botResponse' event → App.tsx (handles event) 
+→ AzureAvatarRealTimeService.speakWithAutoVoice() → Avatar speaks with lip-sync
+```
 
 ---
 
@@ -1050,3 +1061,395 @@ npm install && npm run dev
 ---
 
 *Built with ❤️ by developers who believe in the power of conversational AI*
+
+---
+
+## 🔧 **Technical Deep Dive: Bot Response to Avatar Text-to-Speech**
+
+### **Complete Data Flow Architecture**
+
+```mermaid
+sequenceDiagram
+    participant User as 👤 User
+    participant Speech as 🎤 SpeechService
+    participant Bot as 🤖 BotService
+    participant App as 📱 App.tsx
+    participant Avatar as 👤 AvatarService
+    participant Video as 📺 WebRTC Stream
+
+    User->>Speech: Speaks into microphone
+    Speech->>App: onRecognized(text)
+    App->>Bot: sendMessage(text)
+    Bot->>Bot: DirectLine API call
+    Bot->>App: emits 'botResponse' event
+    App->>Avatar: speakWithAutoVoice(botText)
+    Avatar->>Avatar: Creates SSML + selects voice
+    Avatar->>Video: Synthesizes speech with lip-sync
+    Video->>User: Avatar speaks response
+```
+
+### **1. Bot Response Reception (BotService.ts)**
+
+When your Copilot Studio bot sends a response, here's exactly how it's captured:
+
+```typescript
+// File: src/services/BotService.ts
+private setupActivityListener(): void {
+  if (!this.directLine) return;
+
+  this.directLine.activity$.subscribe({
+    next: (activity) => {
+      console.log('Received activity from bot:', activity);
+      
+      // Only process messages from the bot (not user messages)
+      if (activity.from && activity.from.id !== 'user' && activity.type === 'message') {
+        const botMessage: BotMessage = {
+          id: activity.id || uuidv4(),
+          text: activity.text || '',              // ← THIS IS THE TEXT THAT WILL BE SPOKEN
+          from: { 
+            id: activity.from.id,
+            name: activity.from.name 
+          },
+          timestamp: new Date(activity.timestamp || Date.now()),
+          type: 'bot'
+        };
+
+        this.conversationState.messages.push(botMessage);
+        
+        // 🔥 CRITICAL: This emits the event that triggers avatar speech
+        this.emitBotResponse(botMessage);
+      }
+    }
+  });
+}
+
+// This is the bridge between bot response and avatar speech
+private emitBotResponse(message: BotMessage): void {
+  const event = new CustomEvent('botResponse', { detail: message });
+  window.dispatchEvent(event);  // ← Triggers App.tsx listener
+}
+```
+
+### **2. Bot Response to Avatar Connection (App.tsx)**
+
+The main application listens for bot responses and immediately triggers avatar speech:
+
+```typescript
+// File: src/App.tsx - Lines 125-155
+useEffect(() => {
+  const handleBotResponse = async (event: Event) => {
+    const customEvent = event as CustomEvent<BotMessage>;
+    const botMessage = customEvent.detail;
+    
+    setAppState(prev => ({
+      ...prev,
+      botResponse: botMessage.text,    // Update UI state
+      isProcessing: false
+    }));
+
+    // Update conversation history
+    setConversationHistory(prev => [...prev, botMessage]);
+
+    // 🔥 CRITICAL: Immediately speak the bot response using Azure Avatar
+    try {
+      if (azureAvatarServiceRef.current && botMessage.text.trim()) {
+        // Check current avatar state for debugging
+        const currentlySpeaking = azureAvatarServiceRef.current.isSpeakingNow();
+        const queueLength = azureAvatarServiceRef.current.getQueueLength();
+        const deviceId = azureAvatarServiceRef.current.getDeviceSessionId();
+        
+        if (currentlySpeaking || queueLength > 0) {
+          console.log(`🎭 Device ${deviceId} - Avatar busy - Speaking: ${currentlySpeaking}, Queue: ${queueLength}`);
+        }
+        
+        // 🎯 THIS IS WHERE BOT TEXT BECOMES AVATAR SPEECH
+        await azureAvatarServiceRef.current.speakWithAutoVoice(botMessage.text, 'en-US');
+      }
+    } catch (error) {
+      setAppState(prev => ({
+        ...prev,
+        error: `Avatar speech failed: ${error instanceof Error ? error.message : String(error)}`
+      }));
+      addNotification('Failed to speak response', 'warning');
+    }
+  };
+
+  // Listen for bot response events
+  window.addEventListener('botResponse', handleBotResponse);
+  
+  return () => {
+    window.removeEventListener('botResponse', handleBotResponse);
+  };
+}, []);
+```
+
+### **3. Avatar Text-to-Speech Processing (AzureAvatarRealTimeService.ts)**
+
+Here's the exact process that converts bot text into avatar speech:
+
+```typescript
+// File: src/services/AzureAvatarRealTimeService.ts
+
+// Step 1: Auto voice selection based on language
+public async speakWithAutoVoice(text: string, detectedLanguage?: string): Promise<void> {
+  const language = detectedLanguage || 'en-US';
+  const bestVoice = this.getBestVoiceForLanguage(language);  // Selects appropriate voice
+  
+  await this.speak(text, bestVoice);  // Calls main speak method
+}
+
+// Step 2: Main speaking method with queue management
+public async speak(text: string, voice?: string): Promise<void> {
+  if (!this.avatarSynthesizer || !this.isSessionActive) {
+    throw new Error(`Avatar session not started on device ${this.deviceSessionId}`);
+  }
+
+  console.log(`🎭 Speak request for device ${this.deviceSessionId} - Current state: speaking=${this.isSpeaking}, queue=${this.speakQueue.length}`);
+
+  // Queue management: Add to queue if avatar is already speaking
+  if (this.isSpeaking) {
+    console.log(`🎭 Avatar currently speaking, queueing request...`);
+    return new Promise((resolve, reject) => {
+      this.speakQueue.push({ text, voice, resolve, reject });
+      console.log(`📋 Request queued, new queue length: ${this.speakQueue.length}`);
+    });
+  }
+
+  this.isSpeaking = true;
+  console.log(`🎭 Starting to speak:`, text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+
+  try {
+    // Step 3: Voice selection and SSML creation
+    const selectedVoice = voice || this.configService.getSpeechConfig().synthesisVoice || 'en-US-JennyMultilingualNeural';
+    
+    // Step 4: Create optimized SSML for speech synthesis
+    const ssml = this.createSSML(text, selectedVoice);
+    
+    // Step 5: Emit speaking started event (for UI updates)
+    setTimeout(() => this.emitEvent('speakingStarted', { 
+      text, 
+      voice: selectedVoice, 
+      deviceId: this.deviceSessionId 
+    }), 0);
+
+    // Step 6: 🔥 CRITICAL - This is where the magic happens
+    // The Azure Avatar Real-Time API synthesizes speech with video
+    const result = await this.avatarSynthesizer.speakSsmlAsync(ssml);
+
+    // Step 7: Handle synthesis result
+    setTimeout(() => {
+      if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+        this.emitEvent('speakingCompleted', { 
+          text, 
+          voice: selectedVoice, 
+          resultId: result.resultId, 
+          deviceId: this.deviceSessionId 
+        });
+      } else {
+        this.emitEvent('speakingError', { 
+          error: `Speech synthesis failed: ${result.reason}`, 
+          voice: selectedVoice, 
+          deviceId: this.deviceSessionId 
+        });
+      }
+    }, 0);
+
+  } catch (error) {
+    console.error(`❌ Avatar speaking failed:`, error);
+    setTimeout(() => this.emitEvent('speakingError', { 
+      error: error instanceof Error ? error.message : String(error), 
+      deviceId: this.deviceSessionId 
+    }), 0);
+    throw error;
+  } finally {
+    this.isSpeaking = false;
+    console.log(`🎭 Finished speaking, queue length: ${this.speakQueue.length}`);
+    // Process next item in queue
+    this.processNextInQueue();
+  }
+}
+
+// Step 8: SSML Creation for optimal speech synthesis
+private createSSML(text: string, voice: string): string {
+  // Ultra-minimal HTML encoding for performance
+  const encodedText = text.replace(/[&<>]/g, (char) => {
+    return char === '&' ? '&amp;' : char === '<' ? '&lt;' : '&gt;';
+  });
+
+  // Minimal SSML for maximum speed - this is what the Azure API receives
+  return `<speak version="1.0" xml:lang="en-US"><voice name="${voice}">${encodedText}</voice></speak>`;
+}
+
+// Step 9: Voice selection logic
+public getBestVoiceForLanguage(languageCode: string): string {
+  const availableLanguages = this.configService.getAvailableLanguages();
+  const matchedLanguage = availableLanguages.find((lang: any) => lang.code === languageCode);
+  
+  if (matchedLanguage) {
+    console.log(`🗣️ Found voice for ${languageCode}: ${matchedLanguage.voice}`);
+    return matchedLanguage.voice;
+  }
+  
+  // Fallback to multilingual voice
+  console.log(`🗣️ No specific voice found for ${languageCode}, using multilingual fallback`);
+  return 'en-US-JennyMultilingualNeural';
+}
+```
+
+### **4. Real-time Avatar Video Output**
+
+The avatar video with lip-sync is delivered through WebRTC:
+
+```typescript
+// File: src/services/AzureAvatarRealTimeService.ts - WebRTC Setup
+private async setupWebRTC(iceServerInfo: any, videoElementId: string): Promise<void> {
+  // Create WebRTC peer connection
+  this.peerConnection = new RTCPeerConnection({
+    iceServers: [{
+      urls: [iceServerInfo.url],
+      username: iceServerInfo.username,
+      credential: iceServerInfo.credential
+    }]
+  });
+
+  // Handle incoming video stream from Azure Avatar API
+  this.peerConnection.ontrack = (event) => {
+    console.log('📺 Received WebRTC track:', event.track.kind);
+    
+    if (event.track.kind === 'video') {
+      const videoElement = document.getElementById(videoElementId) as HTMLVideoElement;
+      if (videoElement) {
+        // 🔥 THIS IS WHERE THE AVATAR VIDEO APPEARS
+        videoElement.srcObject = event.streams[0];
+        videoElement.autoplay = true;
+        videoElement.muted = true; // Initially muted, unmuted after autoplay
+        videoElement.volume = 1.0;
+        event.track.enabled = true;
+        
+        // Enable autoplay with unmuting after successful start
+        setTimeout(async () => {
+          try {
+            await videoElement.play();
+            // Unmute after successful autoplay for lip-sync audio
+            setTimeout(() => {
+              videoElement.muted = false;
+            }, 800);
+          } catch (error) {
+            console.log('Audio autoplay blocked, user interaction required');
+          }
+        }, 100);
+      }
+    }
+  };
+
+  // Start avatar with WebRTC connection
+  await new Promise<void>((resolve, reject) => {
+    this.avatarSynthesizer!.startAvatarAsync(this.peerConnection!)
+      .then((result) => {
+        if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+          console.log('✅ Avatar WebRTC session started successfully');
+          resolve();
+        } else {
+          reject(new Error(`Failed to start avatar: ${result.reason}`));
+        }
+      })
+      .catch(reject);
+  });
+}
+```
+
+### **5. Complete Configuration Chain**
+
+Here's how to configure the entire system:
+
+```typescript
+// File: src/services/ConfigService.ts
+export default class ConfigService {
+  // Bot configuration for Copilot Studio
+  getBotConfig(): BotConfig {
+    return {
+      directLineSecret: import.meta.env.VITE_DIRECTLINE_SECRET  // Your bot's Direct Line secret
+    };
+  }
+
+  // Speech configuration for Azure Speech Services
+  getSpeechConfig(): SpeechConfig {
+    return {
+      speechKey: import.meta.env.VITE_SPEECH_KEY,              // Azure Speech API key
+      speechRegion: import.meta.env.VITE_SPEECH_REGION,        // e.g., "eastus"
+      speechEndpoint: import.meta.env.VITE_SPEECH_ENDPOINT,    // Speech service endpoint
+      synthesisVoice: 'en-US-JennyMultilingualNeural'          // Default voice
+    };
+  }
+
+  // Avatar configuration for real-time video
+  getAvatarConfig(): AvatarConfig {
+    return {
+      character: import.meta.env.VITE_AVATAR_CHARACTER || 'lisa',
+      style: import.meta.env.VITE_AVATAR_STYLE || 'casual-sitting',
+      voice: import.meta.env.VITE_AVATAR_VOICE || 'en-US-JennyMultilingualNeural'
+    };
+  }
+}
+```
+
+### **6. Environment Variables Required**
+
+```bash
+# Bot Configuration
+VITE_DIRECTLINE_SECRET=your_copilot_studio_directline_secret
+
+# Azure Speech Services  
+VITE_SPEECH_KEY=your_azure_speech_subscription_key
+VITE_SPEECH_REGION=eastus
+VITE_SPEECH_ENDPOINT=https://eastus.api.cognitive.services.azure.com/
+
+# Azure Avatar Real-Time API
+VITE_AVATAR_SUBSCRIPTION_KEY=your_avatar_subscription_key
+VITE_AVATAR_REGION=eastus
+VITE_AVATAR_ENDPOINT=https://eastus.api.cognitive.services.azure.com/
+
+# Avatar Customization (Optional)
+VITE_AVATAR_CHARACTER=lisa
+VITE_AVATAR_STYLE=casual-sitting
+VITE_AVATAR_VOICE=en-US-JennyMultilingualNeural
+```
+
+### **7. Debugging the Connection**
+
+To debug the bot-to-avatar connection, use these console commands:
+
+```typescript
+// Check bot connection status
+console.log('Bot connected:', botServiceRef.current?.isConnectedToBoot());
+
+// Check avatar session status  
+console.log('Avatar active:', azureAvatarServiceRef.current?.isActive());
+
+// Monitor avatar speaking state
+console.log('Avatar speaking:', azureAvatarServiceRef.current?.isSpeakingNow());
+
+// Check avatar queue
+console.log('Avatar queue length:', azureAvatarServiceRef.current?.getQueueLength());
+
+// Get detailed avatar debug info
+console.log('Avatar debug:', azureAvatarServiceRef.current?.getDebugInfo());
+```
+
+### **8. Key Success Factors**
+
+1. **✅ Proper Event Chain**: `BotService` → `botResponse` event → `App.tsx` → `AzureAvatarRealTimeService`
+2. **✅ WebRTC Connection**: Avatar video stream must be established before speaking
+3. **✅ SSML Processing**: Text is converted to SSML with voice selection
+4. **✅ Queue Management**: Multiple bot responses are queued and processed sequentially
+5. **✅ Error Handling**: Each step has error handling to prevent system breakdown
+
+### **9. Performance Optimizations**
+
+- **Ultra-fast debouncing**: 150ms timeout for speech recognition to bot processing
+- **Minimal SSML**: Optimized SSML generation for reduced latency
+- **Queue management**: Prevents overlapping speech synthesis requests
+- **Event optimization**: Non-critical events are deferred using `requestIdleCallback`
+- **WebRTC streaming**: Real-time video delivery with minimal buffering
+
+This architecture ensures that every word from your Copilot Studio bot is immediately converted into natural avatar speech with perfect lip-sync and minimal latency.
