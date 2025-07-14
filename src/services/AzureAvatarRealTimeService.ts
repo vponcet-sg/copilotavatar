@@ -40,7 +40,7 @@ export class AzureAvatarRealTimeService {
     this.configService = ConfigService.getInstance();
     // Generate unique device session ID for this browser/device instance
     this.deviceSessionId = this.generateDeviceSessionId();
-    console.log(`🔧 Avatar service initialized for device: ${this.deviceSessionId}`);
+    console.log(`Avatar service initialized for device: ${this.deviceSessionId}`);
   }
 
   /**
@@ -64,12 +64,12 @@ export class AzureAvatarRealTimeService {
   ): Promise<void> {
     // Prevent concurrent session starts on THIS device only
     if (this.isSessionActive) {
-      console.log(`📱 Avatar session already active on device: ${this.deviceSessionId}`);
+      console.log(`Avatar session already active on device: ${this.deviceSessionId}`);
       return;
     }
     
     if (this.isSessionStarting) {
-      console.log(`📱 Avatar session already starting on device: ${this.deviceSessionId}, waiting...`);
+      console.log(`Avatar session already starting on device: ${this.deviceSessionId}, waiting...`);
       // Wait for current session start to complete on THIS device
       while (this.isSessionStarting) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -78,16 +78,16 @@ export class AzureAvatarRealTimeService {
     }
 
     this.isSessionStarting = true;
-    console.log(`🚀 Starting avatar session for device: ${this.deviceSessionId}`);
+    console.log(`Starting avatar session for device: ${this.deviceSessionId}`);
 
     try {
       const speechConfig = this.createSpeechConfig();
-      console.log('✅ Speech config created successfully');
+      console.log('Speech config created successfully');
       
       // Get ICE server credentials for WebRTC
-      console.log('🔄 Getting ICE server credentials...');
+      console.log('Getting ICE server credentials...');
       const iceServerInfo = await this.getIceServerInfo();
-      console.log('✅ ICE server credentials obtained:', { url: iceServerInfo.url.substring(0, 50) + '...' });
+      console.log('ICE server credentials obtained:', { url: iceServerInfo.url.substring(0, 50) + '...' });
       
       // Try avatar configurations with fallbacks
       await this.tryAvatarConfigurations(
@@ -98,7 +98,7 @@ export class AzureAvatarRealTimeService {
         videoElementId
       );
 
-      console.log(`🎉 Azure Avatar Real-Time session started successfully for device: ${this.deviceSessionId}`);
+      console.log(`Azure Avatar Real-Time session started successfully for device: ${this.deviceSessionId}`);
       this.isSessionActive = true;
       this.isSessionStarting = false;
 
@@ -107,7 +107,7 @@ export class AzureAvatarRealTimeService {
       
     } catch (error) {
       this.isSessionStarting = false;
-      console.error(`❌ Failed to start avatar session for device ${this.deviceSessionId}:`, error);
+      console.error(`Failed to start avatar session for device ${this.deviceSessionId}:`, error);
       
       // Enhanced error logging
       if (error instanceof Error) {
@@ -125,42 +125,45 @@ export class AzureAvatarRealTimeService {
 
   /**
    * Speak text using the avatar with multi-lingual support - with per-device concurrency protection
+   * CRITICAL FLOW STEP 5: Convert Text to Live Avatar Speech + Video
    */
   public async speak(text: string, voice?: string): Promise<void> {
     if (!this.avatarSynthesizer || !this.isSessionActive) {
       throw new Error(`Avatar session not started on device ${this.deviceSessionId}. Call startSession() first.`);
     }
 
-    console.log(`🎭 Speak request for device ${this.deviceSessionId} - Current state: speaking=${this.isSpeaking}, queue=${this.speakQueue.length}`);
+    console.log(`Speak request for device ${this.deviceSessionId} - Current state: speaking=${this.isSpeaking}, queue=${this.speakQueue.length}`);
 
     // Add to queue if currently speaking on THIS device
     if (this.isSpeaking) {
-      console.log(`🎭 Avatar currently speaking on device ${this.deviceSessionId}, queueing request...`);
+      console.log(`Avatar currently speaking on device ${this.deviceSessionId}, queueing request...`);
       return new Promise((resolve, reject) => {
         this.speakQueue.push({ text, voice, resolve, reject });
-        console.log(`📋 Request queued for device ${this.deviceSessionId}, new queue length: ${this.speakQueue.length}`);
+        console.log(`Request queued for device ${this.deviceSessionId}, new queue length: ${this.speakQueue.length}`);
       });
     }
 
     this.isSpeaking = true;
-    console.log(`🎭 Device ${this.deviceSessionId} starting to speak:`, text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+    console.log(`Device ${this.deviceSessionId} starting to speak:`, text.substring(0, 50) + (text.length > 50 ? '...' : ''));
 
     try {
       // Ultra-fast voice determination
       const selectedVoice = voice || this.configService.getSpeechConfig().synthesisVoice || 'en-US-JennyMultilingualNeural';
       
-      // Create ultra-optimized SSML
+      // CONVERT TEXT TO SSML: Create ultra-optimized SSML for Azure Avatar API
       const ssml = this.createSSML(text, selectedVoice);
       
       // Fire-and-forget event emission to prevent any blocking
       setTimeout(() => this.emitEvent('speakingStarted', { text, voice: selectedVoice, deviceId: this.deviceSessionId }), 0);
 
-      // Ultra-fast speaking - ensure only one call at a time per device
+      // CRITICAL FLOW: Azure Avatar API creates lip-sync video + audio
+      // LIVE VIDEO GENERATION: This creates real-time avatar video with lip-sync
       const result = await this.avatarSynthesizer.speakSsmlAsync(ssml);
 
       // Non-blocking result handling
       setTimeout(() => {
         if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+          // SUCCESS: Avatar video with speech completed
           this.emitEvent('speakingCompleted', { text, voice: selectedVoice, resultId: result.resultId, deviceId: this.deviceSessionId });
         } else {
           this.emitEvent('speakingError', { error: `Speech synthesis failed: ${result.reason}`, voice: selectedVoice, deviceId: this.deviceSessionId });
@@ -168,12 +171,12 @@ export class AzureAvatarRealTimeService {
       }, 0);
 
     } catch (error) {
-      console.error(`❌ Avatar speaking failed on device ${this.deviceSessionId}:`, error);
+      console.error(`Avatar speaking failed on device ${this.deviceSessionId}:`, error);
       setTimeout(() => this.emitEvent('speakingError', { error: error instanceof Error ? error.message : String(error), deviceId: this.deviceSessionId }), 0);
       throw error;
     } finally {
       this.isSpeaking = false;
-      console.log(`🎭 Device ${this.deviceSessionId} finished speaking, queue length: ${this.speakQueue.length}`);
+      console.log(`Device ${this.deviceSessionId} finished speaking, queue length: ${this.speakQueue.length}`);
       // Process next item in queue for this device
       this.processNextInQueue();
     }
@@ -184,7 +187,7 @@ export class AzureAvatarRealTimeService {
    */
   private async processNextInQueue(): Promise<void> {
     if (this.speakQueue.length > 0 && !this.isSpeaking) {
-      console.log(`🎭 Device ${this.deviceSessionId} processing next item in queue (${this.speakQueue.length} remaining)`);
+      console.log(`Device ${this.deviceSessionId} processing next item in queue (${this.speakQueue.length} remaining)`);
       const nextRequest = this.speakQueue.shift()!;
       try {
         await this.speak(nextRequest.text, nextRequest.voice);
@@ -205,7 +208,7 @@ export class AzureAvatarRealTimeService {
 
     // Clear the speaking queue to prevent further requests on this device
     this.speakQueue = [];
-    console.log(`🛑 Stopping speech on device ${this.deviceSessionId}`);
+    console.log(`Stopping speech on device ${this.deviceSessionId}`);
 
     try {
       // Instant stop with very short timeout
@@ -240,7 +243,7 @@ export class AzureAvatarRealTimeService {
       return;
     }
 
-    console.log(`🛑 Stopping avatar session for device ${this.deviceSessionId}`);
+    console.log(`Stopping avatar session for device ${this.deviceSessionId}`);
 
     try {
       // Clear any pending speaking requests on this device
@@ -286,7 +289,7 @@ export class AzureAvatarRealTimeService {
   private createSpeechConfig(): SpeechSDK.SpeechConfig {
     const speechConfig = this.configService.getSpeechConfig();
     
-    console.log('🔧 Creating speech config:', {
+    console.log('Creating speech config:', {
       hasKey: !!speechConfig.speechKey,
       keyLength: speechConfig.speechKey?.length,
       region: speechConfig.speechRegion,
@@ -328,7 +331,7 @@ export class AzureAvatarRealTimeService {
     const speechConfig = this.configService.getSpeechConfig();
     
     const endpoint = `https://${speechConfig.speechRegion}.tts.speech.microsoft.com/cognitiveservices/avatar/relay/token/v1`;
-    console.log('🔄 Requesting ICE server token from:', endpoint);
+    console.log('Requesting ICE server token from:', endpoint);
 
     try {
       const response = await fetch(endpoint, {
@@ -338,11 +341,11 @@ export class AzureAvatarRealTimeService {
         }
       });
 
-      console.log('📡 ICE server response status:', response.status, response.statusText);
+      console.log('ICE server response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ ICE server request failed:', {
+        console.error('ICE server request failed:', {
           status: response.status,
           statusText: response.statusText,
           errorText
@@ -351,7 +354,7 @@ export class AzureAvatarRealTimeService {
       }
 
       const data = await response.json();
-      console.log('✅ ICE server response received:', {
+      console.log('ICE server response received:', {
         hasUrls: !!data.Urls,
         urlCount: data.Urls?.length,
         hasUsername: !!data.Username,
@@ -368,24 +371,25 @@ export class AzureAvatarRealTimeService {
         credential: data.Password
       };
     } catch (error) {
-      console.error('❌ Failed to get ICE server info:', error);
+      console.error('Failed to get ICE server info:', error);
       throw error;
     }
   }
 
   /**
    * Set up WebRTC peer connection for this device
+   * CRITICAL FLOW STEP 7: Live Video Streaming Setup
    */
   private async setupWebRTC(iceServerInfo: { url: string; username: string; credential: string }, videoElementId: string): Promise<void> {
     // Close any existing peer connection to prevent multiple concurrent connections on this device
     if (this.peerConnection) {
-      console.log(`🧹 Closing existing peer connection for device ${this.deviceSessionId}`);
+      console.log(`Closing existing peer connection for device ${this.deviceSessionId}`);
       this.peerConnection.close();
       this.peerConnection = null;
     }
 
-    console.log(`🔗 Creating WebRTC peer connection for device ${this.deviceSessionId}`);
-    // Create WebRTC peer connection
+    console.log(`Creating WebRTC peer connection for device ${this.deviceSessionId}`);
+    // WEBRTC CONNECTION: Create WebRTC peer connection for live video streaming
     this.peerConnection = new RTCPeerConnection({
       iceServers: [{
         urls: [iceServerInfo.url],
@@ -394,21 +398,21 @@ export class AzureAvatarRealTimeService {
       }]
     });
 
-    // Handle incoming video/audio tracks - optimized for performance
+    // LIVE VIDEO STREAMING: Handle incoming video/audio tracks - optimized for performance
     this.peerConnection.ontrack = (event) => {
       // Reduce logging during video playback to prevent lag
       if (event.track.kind === 'video') {
-        // Video track received - setting up stream
+        // VIDEO TRACK: Avatar video with lip-sync received
       } else if (event.track.kind === 'audio') {
-        // Audio track received - configuring audio
+        // AUDIO TRACK: Avatar speech audio received
       }
       
       const videoElement = document.getElementById(videoElementId) as HTMLVideoElement;
       
       if (videoElement) {
         if (event.track.kind === 'video') {
-          // Attaching video stream to video element
-          videoElement.srcObject = event.streams[0];
+          // CONNECT LIVE STREAM: Attaching avatar video stream to HTML video element
+          videoElement.srcObject = event.streams[0];  // LIVE AVATAR VIDEO APPEARS HERE
           videoElement.autoplay = true;
           videoElement.playsInline = true;
           videoElement.muted = false;
@@ -457,16 +461,16 @@ export class AzureAvatarRealTimeService {
         if (!videoElement.onloadedmetadata) {
           videoElement.onloadedmetadata = () => {
             // Minimal logging to prevent performance issues during avatar speaking
-            console.log('✅ Avatar video ready');
+            console.log('Avatar video ready');
           };
           
           videoElement.onplay = () => {
-            console.log('▶️ Avatar video playing');
+            console.log('Avatar video playing');
           };
           
           // Simplified error handling
           videoElement.onerror = (error) => {
-            console.error('❌ Avatar video error:', error);
+            console.error('Avatar video error:', error);
           };
         }
       }
@@ -513,27 +517,27 @@ export class AzureAvatarRealTimeService {
     this.peerConnection.addTransceiver('audio', { direction: 'sendrecv' });
 
     // Start avatar with WebRTC connection
-    console.log('🔄 Starting avatar with WebRTC connection...');
+    console.log('Starting avatar with WebRTC connection...');
     await new Promise<void>((resolve, reject) => {
       this.avatarSynthesizer!.startAvatarAsync(this.peerConnection!)
         .then((result) => {
-          console.log('🔍 Avatar start result:', {
+          console.log('Avatar start result:', {
             reason: result.reason,
             resultId: result.resultId,
             reasonString: this.getResultReasonString(result.reason)
           });
           
           if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
-            console.log('✅ Avatar WebRTC session started successfully');
+            console.log('Avatar WebRTC session started successfully');
             resolve();
           } else {
             const errorDetails = this.getDetailedErrorInfo(result);
-            console.error('❌ Failed to start avatar:', errorDetails);
+            console.error('Failed to start avatar:', errorDetails);
             reject(new Error(`Failed to start avatar: ${errorDetails.reason} - ${errorDetails.details}`));
           }
         })
         .catch((error) => {
-          console.error('❌ Avatar start promise rejected:', error);
+          console.error('Avatar start promise rejected:', error);
           reject(error);
         });
     });
@@ -563,14 +567,16 @@ export class AzureAvatarRealTimeService {
 
   /**
    * Create ultra-fast SSML for minimal processing lag
+   * CRITICAL FLOW STEP 6: Format Text for Azure Avatar API
    */
   private createSSML(text: string, voice: string): string {
-    // Ultra-minimal HTML encoding - only escape essential characters
+    // SAFE TEXT PROCESSING: Ultra-minimal HTML encoding - only escape essential characters
     const encodedText = text.replace(/[&<>]/g, (char) => {
       return char === '&' ? '&amp;' : char === '<' ? '&lt;' : '&gt;';
     });
 
-    // Minimal SSML for maximum speed
+    // SSML CREATION: Minimal SSML for maximum speed - this is what Azure Avatar API reads
+    // VOICE SELECTION: The voice determines how the avatar sounds and looks
     return `<speak version="1.0" xml:lang="en-US"><voice name="${voice}">${encodedText}</voice></speak>`;
   }
 
@@ -698,7 +704,7 @@ export class AzureAvatarRealTimeService {
       const config = configurations[i];
       
       try {
-        console.log(`🔄 Trying avatar configuration ${i + 1}/${configurations.length} for device ${this.deviceSessionId}:`, config);
+        console.log(`Trying avatar configuration ${i + 1}/${configurations.length} for device ${this.deviceSessionId}:`, config);
         
         const avatarConfig = this.createAvatarConfig(config.character, config.style);
         avatarConfig.remoteIceServers = [{
@@ -707,8 +713,8 @@ export class AzureAvatarRealTimeService {
           credential: iceServerInfo.credential
         }];
 
-        console.log(`🔄 Creating avatar synthesizer for device ${this.deviceSessionId}...`);
-        console.log('📋 Avatar configuration:', {
+        console.log(`Creating avatar synthesizer for device ${this.deviceSessionId}...`);
+        console.log('Avatar configuration:', {
           character: config.character,
           style: config.style,
           hasRemoteIceServers: !!avatarConfig.remoteIceServers,
@@ -727,22 +733,22 @@ export class AzureAvatarRealTimeService {
         }
         
         this.avatarSynthesizer = new SpeechSDK.AvatarSynthesizer(speechConfig, avatarConfig);
-        console.log(`✅ Avatar synthesizer created successfully for device ${this.deviceSessionId}`);
+        console.log(`Avatar synthesizer created successfully for device ${this.deviceSessionId}`);
         
         // Set up event handlers
         this.setupEventHandlers();
-        console.log('✅ Event handlers set up');
+        console.log('Event handlers set up');
 
         // Set up WebRTC
-        console.log('🔄 Setting up WebRTC connection...');
+        console.log('Setting up WebRTC connection...');
         await this.setupWebRTC(iceServerInfo, videoElementId);
-        console.log('✅ WebRTC connection established');
+        console.log('WebRTC connection established');
 
-        console.log(`🎉 Azure Avatar Real-Time session started successfully with ${config.character}/${config.style} for device ${this.deviceSessionId}`);
+        console.log(`Azure Avatar Real-Time session started successfully with ${config.character}/${config.style} for device ${this.deviceSessionId}`);
         return; // Success! Exit the function
         
       } catch (error) {
-        console.warn(`❌ Failed to start avatar with ${config.character}/${config.style} for device ${this.deviceSessionId}:`, error);
+        console.warn(`Failed to start avatar with ${config.character}/${config.style} for device ${this.deviceSessionId}:`, error);
         
         // Clean up failed attempt on this device
         if (this.avatarSynthesizer) {
@@ -770,22 +776,25 @@ export class AzureAvatarRealTimeService {
     const matchedLanguage = availableLanguages.find((lang: any) => lang.code === languageCode);
     
     if (matchedLanguage) {
-      console.log(`🗣️ Found voice for ${languageCode}: ${matchedLanguage.voice}`);
+      console.log(`Found voice for ${languageCode}: ${matchedLanguage.voice}`);
       return matchedLanguage.voice;
     }
     
     // Fallback to multilingual voice or default
-    console.log(`🗣️ No specific voice found for ${languageCode}, using multilingual fallback`);
+    console.log(`No specific voice found for ${languageCode}, using multilingual fallback`);
     return 'en-US-JennyMultilingualNeural';
   }
 
   /**
    * Speak text with automatic voice selection based on language
+   * CRITICAL FLOW STEP 4: Entry Point for Avatar Speech from Copilot Studio
    */
   public async speakWithAutoVoice(text: string, detectedLanguage?: string): Promise<void> {
+    // COPILOT STUDIO TEXT to AVATAR SPEECH CONVERSION STARTS HERE
     const language = detectedLanguage || 'en-US';
     const bestVoice = this.getBestVoiceForLanguage(language);
     
+    // TRIGGER AVATAR SPEECH: Convert bot text to speaking avatar
     await this.speak(text, bestVoice);
   }
 
@@ -810,7 +819,7 @@ export class AzureAvatarRealTimeService {
     const queueLength = this.speakQueue.length;
     this.speakQueue = [];
     if (queueLength > 0) {
-      console.log(`🧹 Cleared ${queueLength} items from speaking queue for device ${this.deviceSessionId}`);
+      console.log(`Cleared ${queueLength} items from speaking queue for device ${this.deviceSessionId}`);
     }
   }
 

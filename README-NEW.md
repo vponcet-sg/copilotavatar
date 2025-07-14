@@ -2,37 +2,7 @@
 
 Real-time speech-to-speech avatar system that converts Copilot Studio bot responses into live avatar video with lip-sync.
 
-**Live Demo**: [https://gydjv2-cbd8hma6fvcuedh5.eastasia-01.azurewebsites.net/](https://gydjv2-cbd8hma6fvcuedh5.eastasi## 📁 Key Files
-
-- `src/services/BotService.ts` - Handles Copilot Studio integration via Direct Line API
-- `src/services/AzureAvatarRealTimeService.ts` - Avatar speech synthesis and WebRTC streaming
-- `src/services/SpeechService.ts` - Speech recognition using Azure Speech SDK
-- `src/App.tsx` - Main app logic and event handling (where the magic happens)
-- `src/services/ConfigService.ts` - Environment configuration management
-
-## 🚀 Development vs Production
-
-### Development (`npm run dev`)
-- Runs on `http://localhost:5173`
-- Hot reload for instant code changes
-- Environment variables loaded from `.env` file
-- Browser console shows detailed logs
-
-### Production (`npm run build` then `npm start`)
-- Built static files served by Express.js
-- Optimized and minified code
-- Production-ready security headers
-- Runs on port 8080 by default
-
-## ✅ Verification Checklist
-
-Before deploying, ensure:
-- [ ] All environment variables are set correctly
-- [ ] Copilot Studio bot is published and accessible
-- [ ] Azure Speech Services resource is active
-- [ ] Avatar Real-Time API access is granted
-- [ ] Browser supports WebRTC (Chrome/Firefox/Edge recommended)
-- [ ] HTTPS is enabled (required for microphone access)zurewebsites.net/)
+**Live Demo**: [https://gydjv2-cbd8hma6fvcuedh5.eastasia-01.azurewebsites.net/](https://gydjv2-cbd8hma6fvcuedh5.eastasia-01.azurewebsites.net/)
 
 ## How It Works
 
@@ -72,40 +42,18 @@ npm run dev
 
 ### Environment Configuration
 
-Create a `.env` file in the root directory with your Azure credentials:
-
 ```bash
 # Azure Speech Services (Required)
 VITE_SPEECH_KEY=your_speech_subscription_key
 VITE_SPEECH_REGION=eastus
 
-# Copilot Studio Bot (Required)  
+# Copilot Studio Bot (Required)
 VITE_DIRECTLINE_SECRET=your_directline_secret
 
 # Azure Avatar API (Required)
 VITE_AVATAR_SUBSCRIPTION_KEY=your_avatar_subscription_key
 VITE_AVATAR_REGION=eastus
 ```
-
-### How to Get Your Credentials
-
-#### 1. Azure Speech Services
-1. Go to [Azure Portal](https://portal.azure.com)
-2. Create a new "Speech Services" resource
-3. Copy the **Key** and **Region** from the resource overview
-4. Use these for `VITE_SPEECH_KEY` and `VITE_SPEECH_REGION`
-
-#### 2. Copilot Studio Bot
-1. Go to [Microsoft Copilot Studio](https://copilotstudio.microsoft.com/)
-2. Create or open your bot
-3. Go to **Settings** → **Channels** → **Direct Line**
-4. Create a new channel and copy the **Secret Key**
-5. Use this for `VITE_DIRECTLINE_SECRET`
-
-#### 3. Azure Avatar Real-Time API
-1. Use the **same Speech Services resource** from step 1
-2. Request access to Avatar Real-Time API (preview feature)
-3. Use the same key and region as Speech Services
 
 ## 🔧 Core Technical Implementation
 
@@ -152,7 +100,11 @@ useEffect(() => {
     const botMessage = customEvent.detail;
     
     // Update conversation history
-    setConversationHistory(prev => [...prev, botMessage]);
+    setAppState(prev => ({
+      ...prev,
+      botResponse: botMessage.text,
+      isProcessing: false
+    }));
 
     // THIS IS THE KEY LINE: Convert bot text to avatar speech
     try {
@@ -187,7 +139,7 @@ public async speak(text: string, voice?: string): Promise<void> {
     throw new Error('Avatar session not started');
   }
 
-  // Queue management for multiple requests  
+  // Queue management for multiple requests
   if (this.isSpeaking) {
     return new Promise((resolve, reject) => {
       this.speakQueue.push({ text, voice, resolve, reject });
@@ -213,16 +165,16 @@ public async speak(text: string, voice?: string): Promise<void> {
     throw error;
   } finally {
     this.isSpeaking = false;
-    this.processNextInQueue(); // Process next item in queue
+    this.processNextInQueue();
   }
 }
 
 private createSSML(text: string, voice: string): string {
-  // Escape XML characters for SSML safety
+  // Escape XML characters
   const encodedText = text.replace(/[&<>]/g, (char) => {
     return char === '&' ? '&amp;' : char === '<' ? '&lt;' : '&gt;';
   });
-  // Create SSML markup for Azure Avatar API
+  // Create SSML for Azure Avatar API
   return `<speak version="1.0" xml:lang="en-US"><voice name="${voice}">${encodedText}</voice></speak>`;
 }
 ```
@@ -281,43 +233,7 @@ This single method call:
 5. Bot response is automatically converted to avatar speech
 6. Watch the avatar speak your bot's response with lip-sync
 
-## � Troubleshooting for Beginners
-
-### Common Issues
-
-#### ❌ "Microphone permission denied"
-- **Solution**: The app needs HTTPS to access microphone
-- Use `npm run dev` (includes HTTPS) or deploy to production
-- Grant microphone permission when browser prompts
-
-#### ❌ "Bot connection failed"
-- **Problem**: Wrong `VITE_DIRECTLINE_SECRET` 
-- **Solution**: 
-  1. Check your Copilot Studio bot is **published**
-  2. Verify Direct Line channel is **enabled**
-  3. Copy the secret key exactly (no extra spaces)
-
-#### ❌ "Avatar not appearing"
-- **Problem**: Missing Azure Avatar API access
-- **Solution**: 
-  1. Avatar Real-Time API is in preview - request access
-  2. Use same Speech Services key as `VITE_AVATAR_SUBSCRIPTION_KEY`
-  3. Only certain regions support Avatar API (try `eastus`)
-
-#### ❌ "Speech recognition not working"
-- **Problem**: Wrong Speech Services configuration
-- **Solution**:
-  1. Verify `VITE_SPEECH_KEY` and `VITE_SPEECH_REGION` match your Azure resource
-  2. Check Speech Services resource is active in Azure Portal
-  3. Try speaking louder and clearer
-
-### Testing Your Setup
-
-1. **Test Speech Services**: Check browser console for speech recognition logs
-2. **Test Bot**: Send manual messages in Copilot Studio test chat
-3. **Test Avatar**: Look for WebRTC connection logs in browser DevTools
-
-## �📁 Key Files
+## 📁 Key Files
 
 - `src/services/BotService.ts` - Handles Copilot Studio integration
 - `src/services/AzureAvatarRealTimeService.ts` - Avatar speech synthesis

@@ -26,7 +26,7 @@ const App: React.FC = () => {
   const [isAvatarSessionActive, setIsAvatarSessionActive] = useState(false);
   const [avatarConnectionState, setAvatarConnectionState] = useState<string>('disconnected');
   const [avatarLastEvent, setAvatarLastEvent] = useState<string>('');
-  const [isMicrophoneMuted, setIsMicrophoneMuted] = useState(false); // Microphone mute state - listening is on by default
+  const [isMicrophoneMuted, setIsMicrophoneMuted] = useState(true); // Microphone mute state - START MUTED for better UX
   
   // Service instances (using refs to persist across renders)
   const speechServiceRef = useRef<SpeechService | null>(null);
@@ -79,21 +79,7 @@ const App: React.FC = () => {
         }));
         setIsAvatarSessionActive(true);
 
-        // Auto-start speech recognition when avatar session is active
-        try {
-          // Check microphone permission first
-          const hasPermission = await speechServiceRef.current.checkMicrophonePermission();
-          if (hasPermission) {
-            // Auto-start listening when avatar becomes active
-            setTimeout(async () => {
-              if (!appState.isListening && !isMicrophoneMuted) {
-                await startListening();
-              }
-            }, 500); // Small delay to ensure avatar is fully initialized
-          }
-        } catch (error) {
-          // Auto-start failed - user will need to manually start
-        }
+        // Avatar session started - auto-start will be handled by onSessionStart callback
 
         console.log('All services initialized successfully');
       } catch (error) {
@@ -124,10 +110,11 @@ const App: React.FC = () => {
   }, []);
 
   // Set up bot response listener
+  // CRITICAL FLOW STEP 3: Bridge from Copilot Studio to Avatar System
   useEffect(() => {
     const handleBotResponse = async (event: Event) => {
       const customEvent = event as CustomEvent<BotMessage>;
-      const botMessage = customEvent.detail;
+      const botMessage = customEvent.detail;  // BOT RESPONSE FROM COPILOT STUDIO
       
       setAppState(prev => ({
         ...prev,
@@ -138,7 +125,8 @@ const App: React.FC = () => {
       // Update conversation history
       setConversationHistory(prev => [...prev, botMessage]);
 
-      // Immediately speak the bot response using Azure Avatar Real-Time Service
+      // THE MAGIC BRIDGE: Convert Copilot Studio text to Avatar speech + video
+      // COPILOT STUDIO to AVATAR CONVERSION HAPPENS HERE
       try {
         if (azureAvatarServiceRef.current && botMessage.text.trim()) {
           // Check if avatar is already speaking and log queue status
@@ -147,10 +135,11 @@ const App: React.FC = () => {
           const deviceId = azureAvatarServiceRef.current.getDeviceSessionId();
           
           if (currentlySpeaking || queueLength > 0) {
-            console.log(`🎭 Device ${deviceId} - Avatar busy - Speaking: ${currentlySpeaking}, Queue: ${queueLength}`);
+            console.log(`Device ${deviceId} - Avatar busy - Speaking: ${currentlySpeaking}, Queue: ${queueLength}`);
           }
           
-          // Use English-only voice - this will automatically queue if needed
+          // CRITICAL CALL: Convert bot text to live avatar speech with lip-sync
+          // This single line transforms Copilot Studio text into a speaking avatar
           await azureAvatarServiceRef.current.speakWithAutoVoice(botMessage.text, 'en-US');
         }
       } catch (error) {
@@ -162,6 +151,7 @@ const App: React.FC = () => {
       }
     };
 
+    // LISTEN FOR BOT RESPONSES: This catches the custom event from BotService
     window.addEventListener('botResponse', handleBotResponse);
     
     return () => {
@@ -184,20 +174,20 @@ const App: React.FC = () => {
       switch (eventType) {
         case 'sessionStarted':
           setIsAvatarSessionActive(true);
-          addNotification('Avatar session started', 'success');
+          // Notification will be handled by onSessionStart callback to avoid duplicates
           break;
         case 'sessionStopped':
           setIsAvatarSessionActive(false);
           setIsAvatarSpeaking(false);
-          addNotification('Avatar session stopped', 'info');
+          // Notification will be handled by onSessionStop callback to avoid duplicates
           break;
         case 'speakingStarted':
-          console.log('🎭 Avatar started speaking');
+          console.log('Avatar started speaking');
           setIsAvatarSpeaking(true);
           break;
         case 'speakingCompleted':
         case 'speakingStopped':
-          console.log('🎭 Avatar stopped speaking');
+          console.log('Avatar stopped speaking');
           setIsAvatarSpeaking(false);
           break;
         case 'sessionError':
@@ -219,14 +209,22 @@ const App: React.FC = () => {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setNotifications(prev => [...prev, { id, message, type }]);
     
-    // Auto-remove notification after 5 seconds
+    // Auto-remove notification after 2.5 seconds (faster dismissal)
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 5000);
+    }, 2500);
   }, []);
 
   // Start speech recognition (acts as unmute button)
   const startListening = useCallback(async () => {
+    console.log('🎤 startListening called - checking conditions...');
+    console.log('Services available:', {
+      speech: !!speechServiceRef.current,
+      bot: !!botServiceRef.current,
+      isListening: appState.isListening,
+      isMuted: isMicrophoneMuted
+    });
+
     if (!speechServiceRef.current || !botServiceRef.current) {
       setAppState(prev => ({ ...prev, error: 'Services not initialized' }));
       return;
@@ -234,7 +232,7 @@ const App: React.FC = () => {
 
     // Check if recognition is already active
     if (speechServiceRef.current.isRecognitionActive()) {
-      console.log('🎤 Speech recognition already active, skipping startup');
+      console.log('🎤 Speech recognition already active, updating UI state');
       setAppState(prev => ({ ...prev, isListening: true }));
       setIsMicrophoneMuted(false);
       return;
@@ -243,8 +241,8 @@ const App: React.FC = () => {
     try {
       // Enhanced microphone permission check with better error messages
       console.log('🎤 Checking microphone permission...');
-      console.log('🔍 Current protocol:', window.location.protocol);
-      console.log('🔍 Current host:', window.location.host);
+      console.log('Current protocol:', window.location.protocol);
+      console.log('Current host:', window.location.host);
       
       // Check if we're on HTTPS (required for microphone access on remote domains)
       if (window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost')) {
@@ -269,15 +267,16 @@ const App: React.FC = () => {
         return;
       }
 
-      // Unmute microphone
+      // Unmute microphone and update state BEFORE starting recognition
       setIsMicrophoneMuted(false);
-
       setAppState(prev => ({
         ...prev,
         isListening: true,
         error: undefined,
         currentMessage: ''
       }));
+
+      console.log('🎤 Starting speech recognition service...');
 
       await speechServiceRef.current.startRecognition(
         // onRecognizing - real-time text display for immediate feedback
@@ -364,6 +363,9 @@ const App: React.FC = () => {
           }));
         }
       );
+      
+      console.log('🎤 Speech recognition started successfully');
+      addNotification('🎤 Microphone activated', 'success');
     } catch (error) {
       console.error('Failed to start speech recognition:', error);
       setAppState(prev => ({
@@ -376,6 +378,7 @@ const App: React.FC = () => {
 
   // Stop speech recognition (acts as mute button)
   const stopListening = useCallback(async () => {
+    console.log('🔇 stopListening called');
     if (!speechServiceRef.current) return;
 
     try {
@@ -396,6 +399,9 @@ const App: React.FC = () => {
         ...prev,
         isListening: false
       }));
+      
+      console.log('🔇 Speech recognition stopped successfully');
+      addNotification('🔇 Microphone muted', 'info');
     } catch (error) {
       console.error('Failed to stop speech recognition:', error);
       setAppState(prev => ({
@@ -456,77 +462,11 @@ const App: React.FC = () => {
   }, []);
 
   // Automatically manage listening state based on avatar speaking
-  useEffect(() => {
-    const manageListening = async () => {
-      // If avatar starts speaking and we're listening, stop listening
-      if (isAvatarSpeaking && appState.isListening) {
-        console.log('🎭 Avatar started speaking, stopping speech recognition');
-        try {
-          await speechServiceRef.current?.stopRecognition();
-          setAppState(prev => ({
-            ...prev,
-            isListening: false
-          }));
-        } catch (error) {
-          console.warn('Failed to stop speech recognition when avatar started speaking:', error);
-        }
-      }
-      // If avatar stops speaking and we're connected but not listening, 
-      // and microphone is NOT muted, start listening again
-      else if (!isAvatarSpeaking && appState.isConnected && !appState.isListening && 
-               !appState.isProcessing && !isMicrophoneMuted) {
-        console.log('🎭 Avatar stopped speaking, automatically restarting speech recognition');
-        try {
-          // Reduced delay for faster response
-          setTimeout(async () => {
-            if (!appState.isListening && !isAvatarSpeaking && appState.isConnected && !isMicrophoneMuted) {
-              await startListening();
-            }
-          }, 300); // Reduced from 1000ms to 300ms
-        } catch (error) {
-          console.warn('Failed to restart speech recognition when avatar stopped speaking:', error);
-        }
-      }
-    };
+  // REMOVED: Auto-mute functionality - microphone stays on even when avatar speaks
+  // Manual mute functionality remains through the mute button
 
-    manageListening();
-  }, [isAvatarSpeaking, appState.isListening, appState.isConnected, appState.isProcessing, isMicrophoneMuted, startListening]);
-
-  // Handle early user interaction to enable video autoplay
-  useEffect(() => {
-    let hasInteracted = false;
-    
-    const enableAutoplay = () => {
-      if (hasInteracted) return;
-      hasInteracted = true;
-      
-      // Find and enable the avatar video
-      const avatarVideo = document.getElementById('avatarVideo') as HTMLVideoElement;
-      if (avatarVideo) {
-        avatarVideo.muted = false;
-        avatarVideo.volume = 1.0;
-        avatarVideo.play().catch(() => {
-          // Autoplay still blocked, will show click-to-start overlay
-        });
-      }
-      
-      // Remove listeners after first interaction
-      document.removeEventListener('click', enableAutoplay);
-      document.removeEventListener('touchstart', enableAutoplay);
-      document.removeEventListener('keydown', enableAutoplay);
-    };
-
-    // Add listeners for user interaction
-    document.addEventListener('click', enableAutoplay);
-    document.addEventListener('touchstart', enableAutoplay);
-    document.addEventListener('keydown', enableAutoplay);
-
-    return () => {
-      document.removeEventListener('click', enableAutoplay);
-      document.removeEventListener('touchstart', enableAutoplay);
-      document.removeEventListener('keydown', enableAutoplay);
-    };
-  }, []);
+  // Video autoplay is now handled automatically without user interaction required
+  // Microphone starts muted - user manually unmutes when ready
 
   return (
     <div className="app">
@@ -565,28 +505,20 @@ const App: React.FC = () => {
               isSessionActive={isAvatarSessionActive}
               isSpeaking={isAvatarSpeaking}
               onSessionStart={() => {
-                addNotification('Avatar session started', 'success');
-                // Auto-start speech recognition when avatar session starts
-                console.log('🎤 Avatar session started - auto-starting speech recognition...');
-                setTimeout(async () => {
-                  if (!appState.isListening && !isMicrophoneMuted && speechServiceRef.current) {
-                    try {
-                      await startListening();
-                      console.log('✅ Speech recognition auto-started with avatar session');
-                    } catch (error) {
-                      console.warn('Failed to auto-start speech recognition:', error);
-                    }
-                  }
-                }, 100); // Minimal delay for immediate startup
+                addNotification('Avatar ready - Click microphone to start talking', 'success');
+                // Microphone starts muted - user will manually unmute when ready
+                console.log('🎤 Avatar session started - microphone is muted by default');
               }}
               onSessionStop={() => addNotification('Avatar session stopped', 'info')}
               onSpeakingStart={() => {
                 console.log('Avatar started speaking (from player)');
                 setIsAvatarSpeaking(true);
+                // REMOVED: No longer stopping speech recognition when avatar speaks
               }}
               onSpeakingStop={() => {
                 console.log('Avatar stopped speaking (from player)');
                 setIsAvatarSpeaking(false);
+                // REMOVED: No longer auto-restarting speech recognition when avatar stops
               }}
               onConnectionStateChange={(state) => setAvatarConnectionState(state)}
               onLastEventChange={(event) => setAvatarLastEvent(event)}

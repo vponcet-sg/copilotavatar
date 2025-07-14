@@ -316,10 +316,10 @@ export class SpeechService {
       console.log('🎤 Checking microphone permission...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => track.stop());
-      console.log('✅ Microphone permission granted');
+      console.log('Microphone permission granted');
       return true;
     } catch (error) {
-      console.error('❌ Microphone permission denied:', error);
+      console.error('Microphone permission denied:', error);
       return false;
     }
   }
@@ -369,11 +369,11 @@ export class SpeechService {
     const matchedLanguage = languageOptions.find(lang => lang.code === language);
     
     if (matchedLanguage) {
-      console.log(`🔊 Updating synthesis voice to: ${matchedLanguage.voice} for language: ${language}`);
+      console.log(`Updating synthesis voice to: ${matchedLanguage.voice} for language: ${language}`);
       this.speechConfig.speechSynthesisVoiceName = matchedLanguage.voice;
       this.speechConfig.speechSynthesisLanguage = language;
     } else {
-      console.warn(`🔊 No voice found for detected language: ${language}, keeping current voice`);
+      console.warn(`No voice found for detected language: ${language}, keeping current voice`);
     }
   }
 
@@ -382,8 +382,8 @@ export class SpeechService {
    * Auto-detection is always enabled for the best user experience
    */
   public setRecognitionLanguage(languageCode: string): void {
-    console.log('🌐 Manual language selection disabled - using auto-detection for optimal experience');
-    console.log('📝 Attempted to set language:', languageCode, '- ignoring in favor of auto-detection');
+    console.log('Manual language selection disabled - using auto-detection for optimal experience');
+    console.log('Attempted to set language:', languageCode, '- ignoring in favor of auto-detection');
     // Auto-detection is always active, so we don't change anything
   }
 

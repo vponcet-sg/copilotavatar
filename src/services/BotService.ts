@@ -111,6 +111,7 @@ export class BotService {
 
   /**
    * Set up listener for bot responses
+   * CRITICAL FLOW STEP 1: Receiving Copilot Studio Bot Responses
    */
   private setupActivityListener(): void {
     if (!this.directLine) return;
@@ -119,11 +120,11 @@ export class BotService {
       next: (activity) => {
         console.log('Received activity from bot:', activity);
         
-        // Only process messages from the bot
+        // COPILOT STUDIO RESPONSE: Only process messages from the bot
         if (activity.from && activity.from.id !== 'user' && activity.type === 'message') {
           const botMessage: BotMessage = {
             id: activity.id || uuidv4(),
-            text: activity.text || '',
+            text: activity.text || '',              // THE BOT'S TEXT RESPONSE
             from: { 
               id: activity.from.id,
               name: activity.from.name 
@@ -134,7 +135,7 @@ export class BotService {
 
           this.conversationState.messages.push(botMessage);
           
-          // Emit custom event for bot response
+          // TRIGGER AVATAR SPEECH: Emit custom event for bot response
           this.emitBotResponse(botMessage);
         }
       },
@@ -146,10 +147,12 @@ export class BotService {
 
   /**
    * Emit bot response event
+   * CRITICAL FLOW STEP 2: Broadcasting Bot Response to Avatar System
    */
   private emitBotResponse(message: BotMessage): void {
+    // EVENT BRIDGE: This custom event triggers avatar speech in App.tsx
     const event = new CustomEvent('botResponse', { detail: message });
-    window.dispatchEvent(event);
+    window.dispatchEvent(event);  // THE MAGIC BRIDGE TO AVATAR SYSTEM
   }
 
   /**

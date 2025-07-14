@@ -23,19 +23,85 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [connectionState, setConnectionState] = useState<string>('disconnected');
-  const [needsUserInteraction, setNeedsUserInteraction] = useState(false);
+  const [isEnablingVideo, setIsEnablingVideo] = useState<boolean>(false);
+  const [videoReady, setVideoReady] = useState<boolean>(false);
+  const [videoUnmuted, setVideoUnmuted] = useState<boolean>(false);
 
   const enableVideoPlayback = async () => {
-    if (videoRef.current) {
-      try {
-        videoRef.current.muted = false;
-        videoRef.current.volume = 1.0;
-        await videoRef.current.play();
-        setNeedsUserInteraction(false);
-      } catch (error) {
-        // Autoplay blocked, needs user interaction
-        setNeedsUserInteraction(true);
+    if (!videoRef.current || isEnablingVideo || videoReady) {
+      return; // Prevent multiple simultaneous attempts or if already ready
+    }
+    
+    setIsEnablingVideo(true);
+    const video = videoRef.current;
+    
+    try {
+      console.log('Attempting to enable video playback...');
+      
+      // Force video to be ready for mobile
+      video.load();
+      
+      // Wait for video to be ready
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Video load timeout')), 5000);
+        
+        const onCanPlay = () => {
+          clearTimeout(timeout);
+          video.removeEventListener('canplay', onCanPlay);
+          video.removeEventListener('error', onError);
+          resolve(undefined);
+        };
+        
+        const onError = () => {
+          clearTimeout(timeout);
+          video.removeEventListener('canplay', onCanPlay);
+          video.removeEventListener('error', onError);
+          reject(new Error('Video load error'));
+        };
+        
+        if (video.readyState >= 3) { // HAVE_FUTURE_DATA
+          resolve(undefined);
+        } else {
+          video.addEventListener('canplay', onCanPlay);
+          video.addEventListener('error', onError);
+        }
+      });
+      
+      // Set video properties for mobile compatibility
+      video.muted = true; // Required for autoplay on mobile
+      video.volume = 1.0;
+      video.playsInline = true; // Critical for iOS
+      
+      // Attempt to play (keep muted for autoplay compliance)
+      const playPromise = video.play();
+      
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log('Video started playing successfully (muted for autoplay compliance)');
+        setVideoReady(true); // Mark as ready
+        
+        // Video will be unmuted automatically when avatar starts speaking
+        // This complies with browser autoplay policies
       }
+      
+    } catch (error) {
+      console.log('Video autoplay failed (this is normal on some browsers):', error);
+      
+      // Fallback for browsers that block autoplay
+      if (videoRef.current) {
+        videoRef.current.muted = true;
+        videoRef.current.playsInline = true;
+        
+        // Try to at least load the video
+        try {
+          await videoRef.current.play();
+          console.log('Video playing muted as fallback');
+        } catch (fallbackError) {
+          console.log('Video requires user interaction:', fallbackError);
+        }
+      }
+    } finally {
+      setIsEnablingVideo(false);
     }
   };
 
@@ -57,6 +123,13 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
           onSessionStop?.();
           break;
         case 'speakingStarted':
+          // Unmute video when avatar starts speaking (this counts as user interaction)
+          if (videoRef.current && videoRef.current.muted && !videoUnmuted) {
+            videoRef.current.muted = false;
+            videoRef.current.volume = 1.0;
+            setVideoUnmuted(true);
+            console.log('Video unmuted for avatar speech');
+          }
           onSpeakingStart?.();
           break;
         case 'speakingCompleted':
@@ -68,9 +141,9 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
           setConnectionState(newState);
           onConnectionStateChange?.(newState);
           
-          // Auto-enable video when connected
+          // Video will be handled by the useEffect, not here
           if (newState === 'connected') {
-            setTimeout(() => enableVideoPlayback(), 100);
+            console.log('Avatar connected');
           }
           break;
         case 'avatarEvent':
@@ -85,6 +158,15 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
     };
   }, [onSessionStart, onSessionStop, onSpeakingStart, onSpeakingStop, onConnectionStateChange, onLastEventChange]);
 
+  // Auto-start video when component mounts and session becomes active
+  useEffect(() => {
+    if (isSessionActive && connectionState === 'connected' && !isEnablingVideo && !videoReady) {
+      console.log('Session active and connected, ensuring video playback...');
+      // Single attempt only
+      setTimeout(() => enableVideoPlayback(), 500);
+    }
+  }, [isSessionActive, connectionState]);
+
   return (
     <div className="avatar-video-container">
       <video
@@ -93,18 +175,51 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
         className={`avatar-video ${(!isSessionActive || connectionState !== 'connected') ? 'hidden' : ''}`}
         autoPlay
         playsInline
-        muted={false}
+        muted={true}
+        loop={false}
+        preload="metadata"
+        {...({ 'webkit-playsinline': 'true' } as any)}
+        {...({ 'x5-playsinline': 'true' } as any)}
+        {...({ 'x5-video-player-type': 'h5' } as any)}
+        {...({ 'x5-video-player-fullscreen': 'false' } as any)}
+        onLoadStart={() => {
+          console.log('Video load started');
+        }}
         onLoadedMetadata={() => {
-          // Attempt to start playback when metadata loads
-          enableVideoPlayback();
+          console.log('Video metadata loaded');
+          // Only attempt if not already enabling or ready
+          if (!isEnablingVideo && !videoReady) {
+            setTimeout(() => enableVideoPlayback(), 100);
+          }
         }}
         onCanPlay={() => {
-          // Attempt to start playback when ready
-          enableVideoPlayback();
+          console.log('Video can play');
+          // Only attempt if not already enabling or ready
+          if (!isEnablingVideo && !videoReady) {
+            setTimeout(() => enableVideoPlayback(), 100);
+          }
+        }}
+        onPlay={() => {
+          console.log('Video started playing');
+        }}
+        onPause={() => {
+          console.log('Video paused');
+        }}
+        onWaiting={() => {
+          console.log('Video waiting for data...');
         }}
         onClick={() => {
-          // Enable audio and playback on user interaction
-          enableVideoPlayback();
+          // Manual click to ensure audio and playback
+          if (videoRef.current) {
+            videoRef.current.muted = false;
+            videoRef.current.volume = 1.0;
+            setVideoUnmuted(true);
+            videoRef.current.play().then(() => {
+              console.log('Video unmuted and playing after user click');
+            }).catch((error) => {
+              console.log('Click play failed:', error);
+            });
+          }
         }}
       />
       
@@ -122,13 +237,6 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
             {!isSessionActive ? '🎭' : '🔗'}
           </div>
           <p>{!isSessionActive ? 'Avatar Initializing...' : 'Connecting...'}</p>
-        </div>
-      )}
-      
-      {isSessionActive && connectionState === 'connected' && needsUserInteraction && (
-        <div className="avatar-placeholder" style={{ background: 'rgba(0, 0, 0, 0.7)' }}>
-          <div className="avatar-emoji">▶️</div>
-          <p>Click to start avatar</p>
         </div>
       )}
     </div>
