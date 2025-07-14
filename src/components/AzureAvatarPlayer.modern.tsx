@@ -22,10 +22,123 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
   onLastEventChange
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
   const [connectionState, setConnectionState] = useState<string>('disconnected');
   const [isEnablingVideo, setIsEnablingVideo] = useState<boolean>(false);
   const [videoReady, setVideoReady] = useState<boolean>(false);
   const [videoUnmuted, setVideoUnmuted] = useState<boolean>(false);
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(true);
+
+  // Detect if device is mobile
+  const detectMobileDevice = (): boolean => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  // Detect if device is iOS (needs special audio handling)
+  const detectiOSDevice = (): boolean => {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  };
+
+  // Set up mobile-optimized audio routing for proper speaker usage
+  const setupMobileAudio = async (video: HTMLVideoElement): Promise<void> => {
+    if (!isMobileDevice) return;
+
+    try {
+      // Create audio context for mobile speaker routing
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      const audioContext = audioContextRef.current;
+      
+      // Resume audio context if suspended (required on mobile)
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+
+      // Create gain node for volume control (instead of using video.muted)
+      if (!gainNodeRef.current) {
+        gainNodeRef.current = audioContext.createGain();
+        gainNodeRef.current.connect(audioContext.destination);
+      }
+
+      // Connect video audio to Web Audio API for proper speaker routing
+      if (video.srcObject && !video.getAttribute('data-audio-connected')) {
+        const source = audioContext.createMediaStreamSource(video.srcObject as MediaStream);
+        source.connect(gainNodeRef.current);
+        video.setAttribute('data-audio-connected', 'true');
+        
+        // Keep video unmuted but control volume through gain node
+        video.muted = false;
+        video.volume = 1.0;
+        
+        // iOS-specific audio routing fix
+        if (detectiOSDevice()) {
+          // Force audio to use loudspeaker instead of earpiece
+          video.setAttribute('playsinline', 'true');
+          video.setAttribute('webkit-playsinline', 'true');
+        }
+        
+        console.log('Mobile audio routing setup completed - using main speakers');
+      }
+    } catch (error) {
+      console.warn('Failed to setup mobile audio routing:', error);
+      // Fallback to default behavior
+    }
+  };
+
+  // Control audio volume for mobile (instead of muting video element)
+  const setMobileAudioVolume = (volume: number): void => {
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = volume;
+      setIsAudioMuted(volume === 0);
+      console.log(`Mobile audio volume set to: ${volume} (${volume === 0 ? 'muted' : 'unmuted'})`);
+    }
+  };
+
+  // Initialize mobile detection
+  useEffect(() => {
+    const mobile = detectMobileDevice();
+    setIsMobileDevice(mobile);
+    if (mobile) {
+      console.log('Mobile device detected - will use optimized audio routing');
+    }
+  }, []);
+
+  // Monitor video srcObject changes for mobile audio setup
+  useEffect(() => {
+    if (!isMobileDevice || !videoRef.current) return;
+
+    const video = videoRef.current;
+    
+    // Set up observer for srcObject changes
+    const observer = new MutationObserver(() => {
+      if (video.srcObject && !video.getAttribute('data-audio-connected')) {
+        console.log('Video stream detected on mobile, setting up audio routing...');
+        setTimeout(() => setupMobileAudio(video), 100);
+      }
+    });
+
+    // Watch for changes to srcObject
+    const watchStreamChanges = () => {
+      if (video.srcObject && !video.getAttribute('data-audio-connected')) {
+        setupMobileAudio(video);
+      }
+    };
+
+    // Check immediately
+    watchStreamChanges();
+
+    // Set up interval to check for stream changes (backup method)
+    const streamInterval = setInterval(watchStreamChanges, 1000);
+
+    return () => {
+      observer.disconnect();
+      clearInterval(streamInterval);
+    };
+  }, [isMobileDevice]);
 
   const enableVideoPlayback = async () => {
     if (!videoRef.current || isEnablingVideo || videoReady) {
@@ -80,6 +193,11 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
         console.log('Video started playing successfully (muted for autoplay compliance)');
         setVideoReady(true); // Mark as ready
         
+        // Set up mobile audio routing for proper speaker usage
+        if (isMobileDevice) {
+          setTimeout(() => setupMobileAudio(video), 500);
+        }
+        
         // Video will be unmuted automatically when avatar starts speaking
         // This complies with browser autoplay policies
       }
@@ -123,10 +241,16 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
           onSessionStop?.();
           break;
         case 'speakingStarted':
-          // Unmute video when avatar starts speaking (this counts as user interaction)
-          if (videoRef.current && videoRef.current.muted && !videoUnmuted) {
-            videoRef.current.muted = false;
-            videoRef.current.volume = 1.0;
+          // Unmute audio when avatar starts speaking (this counts as user interaction)
+          if (videoRef.current && !videoUnmuted) {
+            if (isMobileDevice) {
+              // Use Web Audio API volume control for mobile (preserves speaker routing)
+              setMobileAudioVolume(1.0);
+            } else {
+              // Standard desktop unmuting
+              videoRef.current.muted = false;
+              videoRef.current.volume = 1.0;
+            }
             setVideoUnmuted(true);
             console.log('Video unmuted for avatar speech');
           }
@@ -166,6 +290,19 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
       setTimeout(() => enableVideoPlayback(), 500);
     }
   }, [isSessionActive, connectionState]);
+
+  // Cleanup audio context on unmount
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      if (gainNodeRef.current) {
+        gainNodeRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="avatar-video-container">
@@ -211,8 +348,18 @@ export const AzureAvatarPlayer: React.FC<AzureAvatarPlayerProps> = ({
         onClick={() => {
           // Manual click to ensure audio and playback
           if (videoRef.current) {
-            videoRef.current.muted = false;
-            videoRef.current.volume = 1.0;
+            if (isMobileDevice) {
+              // Use Web Audio API volume control for mobile (preserves speaker routing)
+              setMobileAudioVolume(1.0);
+              // Ensure audio context is resumed on user interaction
+              if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+                audioContextRef.current.resume();
+              }
+            } else {
+              // Standard desktop unmuting
+              videoRef.current.muted = false;
+              videoRef.current.volume = 1.0;
+            }
             setVideoUnmuted(true);
             videoRef.current.play().then(() => {
               console.log('Video unmuted and playing after user click');
