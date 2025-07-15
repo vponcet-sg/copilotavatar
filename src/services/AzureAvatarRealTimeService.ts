@@ -89,8 +89,8 @@ export class AzureAvatarRealTimeService {
       const iceServerInfo = await this.getIceServerInfo();
       console.log('ICE server credentials obtained:', { url: iceServerInfo.url.substring(0, 50) + '...' });
       
-      // Try avatar configurations with fallbacks
-      await this.tryAvatarConfigurations(
+      // Try primary avatar configuration with retry for connection limits
+      await this.startAvatarWithRetry(
         speechConfig,
         iceServerInfo,
         talkingAvatarCharacter,
@@ -673,40 +673,24 @@ export class AzureAvatarRealTimeService {
   /**
    * Get fallback avatar configurations to try if the primary one fails
    */
-  private getAvatarFallbacks(): Array<{ character: string; style: string }> {
-    return [
-      { character: 'lisa', style: 'casual-sitting' },
-      { character: 'lisa', style: 'technical-sitting' },
-      { character: 'anna', style: 'casual-sitting' },
-      { character: 'anna', style: 'technical-sitting' },
-      { character: 'lisa', style: 'graceful-sitting' }
-    ];
-  }
-
   /**
-   * Try to start avatar session with fallback configurations
+   * Start avatar with retry mechanism for connection limits - NO FALLBACKS
    */
-  private async tryAvatarConfigurations(
+  private async startAvatarWithRetry(
     speechConfig: SpeechSDK.SpeechConfig,
     iceServerInfo: { url: string; username: string; credential: string },
     primaryCharacter: string,
     primaryStyle: string,
     videoElementId: string
   ): Promise<void> {
-    const configurations = [
-      { character: primaryCharacter, style: primaryStyle },
-      ...this.getAvatarFallbacks().filter(config => 
-        !(config.character === primaryCharacter && config.style === primaryStyle)
-      )
-    ];
-
-    for (let i = 0; i < configurations.length; i++) {
-      const config = configurations[i];
-      
+    const maxRetries = 3;
+    const baseDelay = 2000; // 2 seconds base delay
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`Trying avatar configuration ${i + 1}/${configurations.length} for device ${this.deviceSessionId}:`, config);
+        console.log(`Starting avatar attempt ${attempt}/${maxRetries} for device ${this.deviceSessionId} with ${primaryCharacter}/${primaryStyle}`);
         
-        const avatarConfig = this.createAvatarConfig(config.character, config.style);
+        const avatarConfig = this.createAvatarConfig(primaryCharacter, primaryStyle);
         avatarConfig.remoteIceServers = [{
           urls: [iceServerInfo.url],
           username: iceServerInfo.username,
@@ -714,13 +698,6 @@ export class AzureAvatarRealTimeService {
         }];
 
         console.log(`Creating avatar synthesizer for device ${this.deviceSessionId}...`);
-        console.log('Avatar configuration:', {
-          character: config.character,
-          style: config.style,
-          hasRemoteIceServers: !!avatarConfig.remoteIceServers,
-          iceServerCount: avatarConfig.remoteIceServers?.length || 0,
-          deviceId: this.deviceSessionId
-        });
         
         // Clean up any existing avatar synthesizer to prevent multiple instances on this device
         if (this.avatarSynthesizer) {
@@ -744,11 +721,11 @@ export class AzureAvatarRealTimeService {
         await this.setupWebRTC(iceServerInfo, videoElementId);
         console.log('WebRTC connection established');
 
-        console.log(`Azure Avatar Real-Time session started successfully with ${config.character}/${config.style} for device ${this.deviceSessionId}`);
+        console.log(`Azure Avatar Real-Time session started successfully with ${primaryCharacter}/${primaryStyle} for device ${this.deviceSessionId}`);
         return; // Success! Exit the function
         
       } catch (error) {
-        console.warn(`Failed to start avatar with ${config.character}/${config.style} for device ${this.deviceSessionId}:`, error);
+        console.warn(`Avatar start attempt ${attempt}/${maxRetries} failed for device ${this.deviceSessionId}:`, error);
         
         // Clean up failed attempt on this device
         if (this.avatarSynthesizer) {
@@ -760,10 +737,15 @@ export class AzureAvatarRealTimeService {
           this.avatarSynthesizer = null;
         }
         
-        // If this is the last configuration, re-throw the error
-        if (i === configurations.length - 1) {
+        // If this is the last attempt, re-throw the error
+        if (attempt === maxRetries) {
           throw error;
         }
+        
+        // Wait before retrying (exponential backoff for connection limits)
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`Waiting ${delay}ms before retry attempt ${attempt + 1} for device ${this.deviceSessionId}...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }

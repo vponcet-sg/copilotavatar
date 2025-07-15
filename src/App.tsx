@@ -365,7 +365,7 @@ const App: React.FC = () => {
       );
       
       console.log('🎤 Speech recognition started successfully');
-      addNotification('🎤 Microphone activated', 'success');
+      addNotification('🟢 Microphone LIVE - Start speaking!', 'success');
     } catch (error) {
       console.error('Failed to start speech recognition:', error);
       setAppState(prev => ({
@@ -401,7 +401,7 @@ const App: React.FC = () => {
       }));
       
       console.log('🔇 Speech recognition stopped successfully');
-      addNotification('🔇 Microphone muted', 'info');
+      addNotification('� Microphone MUTED - Click to unmute for voice chat', 'info');
     } catch (error) {
       console.error('Failed to stop speech recognition:', error);
       setAppState(prev => ({
@@ -505,7 +505,7 @@ const App: React.FC = () => {
               isSessionActive={isAvatarSessionActive}
               isSpeaking={isAvatarSpeaking}
               onSessionStart={() => {
-                addNotification('Avatar ready - Click microphone to start talking', 'success');
+                addNotification('🎤 Avatar ready! Unmute to Talk to Avatar', 'success');
                 // Microphone starts muted - user will manually unmute when ready
                 console.log('🎤 Avatar session started - microphone is muted by default');
               }}

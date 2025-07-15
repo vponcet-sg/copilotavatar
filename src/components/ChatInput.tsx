@@ -61,21 +61,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           />
           
           <div className="input-actions">
-            {/* Voice Button */}
+            {/* Voice Button with Clear Mute/Unmute States */}
             <button
               type="button"
-              className={`voice-button ${isListening ? 'listening' : ''}`}
+              className={`voice-button ${isListening ? 'listening' : 'muted'}`}
               onClick={isListening ? onStopListening : onStartListening}
               disabled={!isConnected || isProcessing}
-              title={isListening ? 'Stop listening' : 'Start listening'}
+              title={isListening ? 'Mute microphone' : 'Unmute microphone to speak'}
             >
               {isListening ? (
                 <div className="listening-indicator">
                   <div className="pulse"></div>
-                  🎤
+                  <span className="mic-icon">🎤</span>
+                  <span className="mic-status">LIVE</span>
                 </div>
               ) : (
-                '🎤'
+                <div className="muted-indicator">
+                  <span className="mic-icon">🎤</span>
+                  <span className="mic-status">MUTED</span>
+                  <span className="slash-overlay">/</span>
+                </div>
               )}
             </button>
 
