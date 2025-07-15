@@ -250,9 +250,9 @@ body {
 /* Unified Container - Responsive and mobile-first */
 .unified-container {
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* Side by side on desktop */
   width: 100%;
-  max-width: 600px; /* Much narrower container */
+  max-width: 1200px; /* Wider container for side-by-side layout */
   height: 85vh; /* Fixed height to prevent vertical expansion */
   max-height: 85vh; /* Ensure it doesn't exceed this height */
   background: var(--bg-glass);
@@ -262,6 +262,14 @@ body {
   overflow: hidden;
   box-shadow: var(--shadow-xl);
   position: relative;
+}
+
+/* Mobile: Stack vertically */
+@media (max-width: 768px) {
+  .unified-container {
+    flex-direction: column;
+    max-width: 600px;
+  }
 }
 
 .unified-container::before {
@@ -281,12 +289,12 @@ body {
 .avatar-section::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 20%;
-  width: 60%;
-  height: 1px;
+  right: 0;
+  top: 20%;
+  width: 1px;
+  height: 60%;
   background: linear-gradient(
-    to right,
+    to bottom,
     transparent 0%,
     rgba(255, 255, 255, 0.1) 20%,
     rgba(255, 255, 255, 0.2) 50%,
@@ -296,14 +304,33 @@ body {
   z-index: 2;
 }
 
+/* Mobile: Horizontal connector at bottom */
+@media (max-width: 768px) {
+  .avatar-section::after {
+    bottom: 0;
+    right: auto;
+    left: 20%;
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 20%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0.1) 80%,
+      transparent 100%
+    );
+  }
+}
+
 /* Avatar Section - Mobile-first responsive */
 .avatar-section {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 40vh; /* Fixed height instead of min-height */
-  flex-shrink: 0; /* Don't allow shrinking */
+  flex: 0 0 50%; /* Take up 50% width on desktop */
+  height: 100%; /* Full height of container */
   padding: var(--spacing-lg);
   margin: 0 auto; /* Center horizontally when constrained */
   background: linear-gradient(
@@ -311,9 +338,19 @@ body {
     var(--bg-glass) 0%,
     var(--bg-secondary) 100%
   );
-  border-bottom: var(--glass-border);
+  border-right: var(--glass-border); /* Right border for side-by-side layout */
   position: relative;
   overflow: hidden;
+}
+
+/* Mobile: Adjust avatar section for vertical layout */
+@media (max-width: 768px) {
+  .avatar-section {
+    flex: none;
+    height: 40vh; /* Fixed height instead of full height */
+    border-right: none;
+    border-bottom: var(--glass-border);
+  }
 }
 
 .avatar-section::before {
@@ -426,8 +463,8 @@ body {
 .chat-section {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  height: 0; /* Force height calculation from flex */
+  flex: 1; /* Take remaining space */
+  height: 100%; /* Full height of container on desktop */
   min-height: 0; /* Allow shrinking */
   background: linear-gradient(
     135deg,
@@ -436,6 +473,13 @@ body {
   );
   overflow: hidden;
   position: relative;
+}
+
+/* Mobile: Adjust chat section for vertical layout */
+@media (max-width: 768px) {
+  .chat-section {
+    height: 0; /* Force height calculation from flex */
+  }
 }
 
 .chat-section::before {
